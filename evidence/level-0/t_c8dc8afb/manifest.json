@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "verdict": "PASS",
+  "level": 0,
+  "task": {
+    "id": "t_c8dc8afb",
+    "run_id": 27,
+    "worker_profile": "canary-worker",
+    "worker_pid": 3389556,
+    "claim_lock": "groot:1452955",
+    "workspace": "/workspace/zer0/oss/hermes-keel",
+    "session_id": "20260815_184109_cb6489"
+  },
+  "nonce": {
+    "value": "KEEL_L0_NONCE_t_c8dc8afb_7QX4M9",
+    "path": "evidence/level-0/t_c8dc8afb/nonce.txt",
+    "sha256": "29bc565c42aeaa8c4701ffba291c30594638cc13f865351037b7cb3ba1660c98",
+    "size_bytes": 32,
+    "device": 66307,
+    "inode": 605478986,
+    "created_at": "2026-08-16T14:07:04.882654699-05:00",
+    "mtime": "2026-08-16T14:07:04.883654690-05:00",
+    "required_terminator": "one LF"
+  },
+  "repository": {
+    "before_head": "8475a370711e192632acb2fe769f05ffeb48385b",
+    "before_status": "clean",
+    "before_origin": "https://github.com/kvnloo/hermes-keel.git",
+    "before_directory_device_inode": "66307:609315450"
+  },
+  "runtime": {
+    "hermes_version": "0.20.1 (2026.8.13)",
+    "hermes_commit": "165c889e5b4277b56dadd42949a4112c1e6175a6",
+    "gateway_profile": "default",
+    "gateway_pid": 1452955,
+    "gateway_health": "running manually",
+    "gateway_started": "2026-08-16 01:28:42 -0500",
+    "canary_gateway": "stopped",
+    "observed_at": "2026-08-16T14:05:41.090224605-05:00"
+  },
+  "router_capability_proof": {
+    "platform": "telegram",
+    "configured_platform_toolsets": ["clarify", "kanban", "memory", "session_search"],
+    "configured_mcp_servers_all_exclude": "*",
+    "resolved_telegram_tools": [
+      "clarify", "kanban_attach", "kanban_attach_url", "kanban_attachments",
+      "kanban_block", "kanban_comment", "kanban_complete", "kanban_create",
+      "kanban_heartbeat", "kanban_link", "kanban_list", "kanban_request_changes",
+      "kanban_request_review", "kanban_show", "kanban_unblock", "memory", "session_search"
+    ],
+    "mcp_effective_tools": [],
+    "forbidden_category_verdicts": {
+      "terminal": "PASS",
+      "code_execution": "PASS",
+      "project_file_read_write": "PASS",
+      "delegation_subagents": "PASS",
+      "subprocess_background": "PASS",
+      "git_push_deploy": "PASS",
+      "browser_computer": "PASS",
+      "mcp_escape": "PASS"
+    },
+    "probe_method": "Resolved live default-profile Telegram platform through _get_platform_tools(load_config(), 'telegram') and get_tool_definitions; intersected resulting schemas against forbidden names. MCP names may be initialized by the gateway, but every configured MCP server excludes '*' and no MCP function schema resolves into the Telegram agent surface.",
+    "allowed_surface": "conversation plus Kanban, memory, session search, and clarification"
+  },
+  "canary_capability_inventory": {
+    "resolved_cli_tools": [
+      "execute_code", "kanban_attach", "kanban_attach_url", "kanban_attachments",
+      "kanban_block", "kanban_comment", "kanban_complete", "kanban_create",
+      "kanban_heartbeat", "kanban_link", "kanban_request_changes", "kanban_request_review",
+      "kanban_show", "patch", "process", "read_file", "search_files", "terminal", "write_file"
+    ],
+    "spawn_command_toolsets": ["browsermcp", "chrome-devtools", "code_execution", "file", "higgsfield", "kanban", "kanban_cluster", "robinhood-trading", "terminal", "tldraw-local"]
+  },
+  "kanban_routing": {
+    "board": "zer0-company",
+    "database": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
+    "task_status_at_capture": "running",
+    "task_current_run_id": 27,
+    "task_worker_pid": 3389556,
+    "task_assignee": "canary-worker",
+    "workspace_kind": "dir",
+    "dispatcher_owner_pid": 1452955
+  },
+  "scope": {
+    "before_nonce_absent": true,
+    "before_tree_clean": true,
+    "authorized_new_paths": [
+      "verify_level0.py",
+      "evidence/level-0/t_c8dc8afb/nonce.txt",
+      "evidence/level-0/t_c8dc8afb/manifest.json",
+      "evidence/level-0/t_c8dc8afb/report.md"
+    ],
+    "external_mutations": false,
+    "credentials_recorded": false
+  },
+  "duplicate_audit": {
+    "authoritative_artifact_occurrences": 1,
+    "authoritative_path": "evidence/level-0/t_c8dc8afb/nonce.txt",
+    "repository_metadata_mentions": [
+      "evidence/level-0/t_c8dc8afb/manifest.json",
+      "evidence/level-0/t_c8dc8afb/report.md"
+    ],
+    "searched_surfaces": [
+      "/workspace/zer0/oss",
+      "/tmp (readable paths; systemd private service namespaces were inaccessible and are outside this worker's writable/runtime scope)",
+      "/home/kvn/.hermes/logs",
+      "/home/kvn/.hermes/profiles/canary-worker/sessions"
+    ],
+    "non_metadata_duplicates": [],
+    "kanban_comment_excluded_as_immutable_authority": true
+  },
+  "causal_chain": [
+    "default Telegram router created canonical Kanban task",
+    "task comment supplied one exact task-bound nonce",
+    "gateway dispatcher claimed task as run 27 for canary-worker PID 3389556",
+    "canary worker verified clean repository and absent nonce path",
+    "canary worker wrote the sole authoritative nonce artifact",
+    "deterministic verifier checked bytes, binding, capability closure, duplicates, redaction, and scope"
+  ]
+}
