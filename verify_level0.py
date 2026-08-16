@@ -23,6 +23,7 @@ EXPECTED_PATHS = {
     f"evidence/level-0/{TASK_ID}/report.md",
     "benchmarks/level0b/README.md",
     "benchmarks/level0b/cases.v1.json",
+    "benchmarks/level0b/cases.v2.json",
     "benchmarks/level0b/run.py",
     "benchmarks/level0b/test_run.py",
     "evidence/level-0b/latest/results.json",
@@ -47,6 +48,30 @@ def fail(message: str) -> None:
 
 def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
+
+
+def authorized_level0b_paths() -> set[str]:
+    manifest_path = ROOT / "benchmarks" / "level0b" / "cases.v2.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != 2 or manifest.get("frozen") is not True:
+        fail("Level 0B compatibility manifest is not frozen schema v2")
+    authorized = set()
+    for record in manifest.get("authorized_evidence", []):
+        task_id = record.get("task_id")
+        nonce = record.get("nonce")
+        rel = record.get("artifact_path")
+        expected_rel = f"evidence/level-0b/telegram-direct/{task_id}/nonce.txt"
+        if (not isinstance(task_id, str) or nonce != f"KEEL_L0B_TELEGRAM_{task_id}"
+                or rel != expected_rel or record.get("acceptance_claim") is not False
+                or record.get("historical_verdict") != "FAIL"):
+            fail("Level 0B authorized evidence record is malformed")
+        data = (ROOT / rel).read_bytes() if (ROOT / rel).is_file() else b""
+        if (data != (nonce + "\n").encode("ascii")
+                or hashlib.sha256(data).hexdigest() != record.get("sha256")
+                or len(data) != record.get("size_bytes")):
+            fail(f"Level 0B authorized artifact binding differs: {rel}")
+        authorized.add(rel)
+    return authorized
 
 
 def main() -> None:
@@ -100,8 +125,9 @@ def main() -> None:
     staged = set(filter(None, git("diff", "--cached", "--name-only").splitlines()))
     untracked = set(filter(None, git("ls-files", "--others", "--exclude-standard").splitlines()))
     paths = tracked | staged | untracked
-    if paths and not paths.issubset(EXPECTED_PATHS):
-        fail(f"out-of-scope working-tree paths: {sorted(paths - EXPECTED_PATHS)}")
+    allowed_paths = EXPECTED_PATHS | authorized_level0b_paths()
+    if paths and not paths.issubset(allowed_paths):
+        fail(f"out-of-scope working-tree paths: {sorted(paths - allowed_paths)}")
     if manifest.get("scope", {}).get("before_nonce_absent") is not True:
         fail("absence-before-write was not recorded")
     print(f"PASS: Level 0 packet verified; nonce_sha256={digest}; authoritative_occurrences=1")

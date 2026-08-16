@@ -27,6 +27,69 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def load_manifest(path: Path) -> tuple[dict[str, Any], bytes]:
+    manifest_bytes = path.read_bytes()
+    manifest = json.loads(manifest_bytes)
+    if manifest.get("frozen") is not True:
+        raise SystemExit("FAIL: case manifest is not frozen")
+    version = manifest.get("schema_version")
+    if version == 1:
+        return manifest, manifest_bytes
+    if version != 2 or manifest.get("base_manifest") != "cases.v1.json":
+        raise SystemExit("FAIL: unsupported case manifest schema")
+    base_path = path.parent / manifest["base_manifest"]
+    base = json.loads(base_path.read_bytes())
+    if base.get("frozen") is not True or base.get("schema_version") != 1:
+        raise SystemExit("FAIL: v2 base manifest is not frozen schema v1")
+    merged = dict(manifest)
+    merged["cases"] = base["cases"]
+    merged["default_timeout_seconds"] = base["default_timeout_seconds"]
+    return merged, manifest_bytes
+
+
+def verify_telegram_v2(receipt: dict[str, Any], contract: dict[str, Any],
+                       artifact_root: Path = ROOT,
+                       expected_tools: set[str] | None = None) -> tuple[bool, dict[str, Any]]:
+    required = set(contract["required_fields"])
+    missing = sorted(required - set(receipt))
+    task_id = receipt.get("task_id")
+    run_id = receipt.get("run_id")
+    nonce = f"{contract['nonce_prefix']}{task_id}" if isinstance(task_id, str) else ""
+    comments = receipt.get("comments")
+    exact_comment = f"{contract['comment_key']}{nonce}"
+    comment_ok = isinstance(comments, list) and comments == [exact_comment]
+    artifacts = receipt.get("artifacts")
+    expected_path = contract["artifact_template"].format(task_id=task_id)
+    artifact_ok = False
+    if isinstance(artifacts, list) and len(artifacts) == 1 and isinstance(artifacts[0], dict):
+        record = artifacts[0]
+        candidate = artifact_root / expected_path
+        expected_bytes = (nonce + "\n").encode("ascii", errors="strict")
+        artifact_ok = (
+            record.get("path") == expected_path
+            and candidate.is_file()
+            and candidate.read_bytes() == expected_bytes
+            and record.get("sha256") == sha(expected_bytes)
+            and record.get("size_bytes") == len(expected_bytes)
+        )
+    router = receipt.get("router_evidence")
+    router_ok = (
+        isinstance(router, dict)
+        and router.get("task_id") == task_id
+        and router.get("run_id") == run_id
+        and isinstance(run_id, int)
+        and run_id > 0
+        and router.get("canonical_task") is True
+        and router.get("canonical_run") is True
+        and router.get("forbidden_capabilities_absent") is True
+        and isinstance(router.get("resolved_tools"), list)
+        and (expected_tools is None or set(router["resolved_tools"]) == expected_tools)
+    )
+    observed = {"missing": missing, "comment_ok": comment_ok, "artifact_ok": artifact_ok,
+                "router_ok": router_ok, "task_id": task_id, "run_id": run_id}
+    return not missing and comment_ok and artifact_ok and router_ok, observed
+
+
 def probe_router(hermes_home: Path, hermes_source: Path, timeout: int) -> tuple[list[str], str]:
     code = """
 import json
@@ -82,7 +145,8 @@ class Ledger:
 
 
 def execute(case: dict[str, Any], tools: set[str], fixture: Path,
-            quarantine: list[dict[str, Any]], receipt: dict[str, Any] | None) -> tuple[str, str, dict[str, Any]]:
+            quarantine: list[dict[str, Any]], receipt: dict[str, Any] | None,
+            telegram_contract: dict[str, Any] | None = None) -> tuple[str, str, dict[str, Any]]:
     kind, inp, expected = case["kind"], case.get("inputs", {}), case["expected"]
     observed: Any = None
     if kind == "router_absent":
@@ -158,6 +222,9 @@ def execute(case: dict[str, Any], tools: set[str], fixture: Path,
     elif kind == "telegram_direct":
         if receipt is None:
             return "SKIP", "No Captain-initiated Telegram receipt supplied", {"observed": "receipt_absent"}
+        if telegram_contract is not None:
+            ok, observed = verify_telegram_v2(receipt, telegram_contract, expected_tools=tools)
+            return ("PASS" if ok else "FAIL"), ("mechanical oracle matched" if ok else "mechanical oracle mismatch"), {"expected": "exact_authoritative_task_binding", "observed": observed}
         missing = sorted(set(inp["required_fields"]) - set(receipt))
         artifact = Path(receipt.get("artifact_path", ""))
         bound = str(receipt.get("nonce", "")).startswith(f"KEEL_L0B_NONCE_{receipt.get('task_id', '')}_")
@@ -197,10 +264,7 @@ def main() -> int:
     parser.add_argument("--hermes-source", type=Path, required=True)
     parser.add_argument("--telegram-receipt", type=Path)
     args = parser.parse_args()
-    manifest_bytes = args.manifest.read_bytes()
-    manifest = json.loads(manifest_bytes)
-    if manifest.get("frozen") is not True or manifest.get("schema_version") != 1:
-        raise SystemExit("FAIL: case manifest is not frozen schema v1")
+    manifest, manifest_bytes = load_manifest(args.manifest)
     timeout = int(manifest["default_timeout_seconds"])
     tools, hermes_version = probe_router(args.hermes_home, args.hermes_source, timeout)
     receipt = json.loads(args.telegram_receipt.read_text()) if args.telegram_receipt else None
@@ -214,7 +278,8 @@ def main() -> int:
         for case in manifest["cases"]:
             started = time.monotonic()
             try:
-                status, reason, detail = execute(case, set(tools), fixture, quarantine, receipt)
+                status, reason, detail = execute(case, set(tools), fixture, quarantine, receipt,
+                                                 manifest.get("telegram_direct_contract"))
             except Exception as exc:
                 status, reason, detail = "FAIL", f"oracle exception: {type(exc).__name__}", {"error": str(exc)}
             elapsed = time.monotonic() - started
@@ -232,7 +297,7 @@ def main() -> int:
                         "expected": True, "observed": {"sentinel_ok": sentinel_ok, "cleanup_ok": cleanup_ok}})
     counts = Counter(x["status"] for x in results)
     counts.update({"PASS": 0, "FAIL": 0, "SKIP": 0})
-    payload = {"schema_version": 1, "suite": manifest["suite"], "verdict": "PASS" if counts["FAIL"] == 0 else "FAIL",
+    payload = {"schema_version": manifest["schema_version"], "suite": manifest["suite"], "verdict": "PASS" if counts["FAIL"] == 0 else "FAIL",
                "manifest_sha256": sha(manifest_bytes), "hermes_version": hermes_version,
                "router_inventory": tools, "counts": {"total": len(results), "PASS": counts["PASS"], "FAIL": counts["FAIL"], "SKIP": counts["SKIP"]},
                "cleanup_verified": cleanup_ok, "sentinel_verified": sentinel_ok, "quarantine": quarantine, "results": results}

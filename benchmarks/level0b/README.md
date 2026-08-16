@@ -14,10 +14,10 @@ The runner emits JSON, JUnit XML, and Markdown. Any forbidden resolved capabilit
 
 `LF-006` and `LF-007` remain ready-but-skipped because restarting the live gateway or changing live configuration requires separate Captain authorization and restoration proof. The initial suite never performs those operations.
 
-`TD-001` is a fast contract for a separate Captain-initiated Telegram test. Create a canonical task from Telegram with a nonce shaped as `KEEL_L0B_NONCE_<task_id>_<random>`. Its worker must write exactly that nonce to one task-scoped artifact and produce a receipt containing `task_id`, `nonce`, `artifact_path`, and `sha256`. Verify afterward without conversation claims:
+`cases.v1.json` remains frozen and reproducible, including its original `TD-001` contract. `cases.v2.json` repairs only the Telegram-direct contract: the sole authoritative task comment must be exactly `EXACT_NONCE=KEEL_L0B_TELEGRAM_<task_id>`, and the receipt must bind the same canonical task/run/router evidence to exactly one byte- and hash-exact task-scoped artifact. Arbitrary prefixes, suffixes, extra comments, duplicate artifacts, and missing run bindings fail closed. Historical evidence listed in v2 remains `acceptance_claim: false`; a new independent run is required for PASS. Verify the corrected contract afterward without conversation claims:
 
 ```sh
-python3 benchmarks/level0b/run.py --hermes-home "$HERMES_HOME_UNDER_TEST" --hermes-source "$HERMES_SOURCE" --telegram-receipt /path/to/receipt.json
+python3 benchmarks/level0b/run.py --manifest benchmarks/level0b/cases.v2.json --hermes-home "$HERMES_HOME_UNDER_TEST" --hermes-source "$HERMES_SOURCE" --telegram-receipt /path/to/receipt.json
 ```
 
 The receipt and artifact are external test inputs; do not commit private filesystem paths. A missing receipt is SKIP, never PASS.

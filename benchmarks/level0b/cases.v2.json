@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "suite": "hermes-keel-level-0b",
+  "frozen": true,
+  "default_timeout_seconds": 10,
+  "base_manifest": "cases.v1.json",
+  "telegram_direct_contract": {
+    "version": 2,
+    "nonce_prefix": "KEEL_L0B_TELEGRAM_",
+    "comment_key": "EXACT_NONCE=",
+    "artifact_template": "evidence/level-0b/telegram-direct/{task_id}/nonce.txt",
+    "required_fields": ["task_id", "run_id", "comments", "artifacts", "router_evidence"]
+  },
+  "authorized_evidence": [
+    {
+      "task_id": "t_72294ce7",
+      "run_id": 33,
+      "nonce": "KEEL_L0B_TELEGRAM_t_72294ce7",
+      "artifact_path": "evidence/level-0b/telegram-direct/t_72294ce7/nonce.txt",
+      "sha256": "d7a82860f5daae2f30008194f7eeeb5783dcbb2e7556b81ac5a084cf3d43ebb3",
+      "size_bytes": 29,
+      "acceptance_claim": false,
+      "historical_verdict": "FAIL"
+    }
+  ]
+}
