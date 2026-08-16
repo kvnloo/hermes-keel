@@ -1,7 +1,10 @@
 import json
 import os
+import socket
 import sqlite3
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -17,6 +20,13 @@ BUILD_BODY = (
     "This task establishes the supervisor only; do not perform the actual gateway restart. "
     "hermes-gateway.service is the fixed target."
 )
+GOOD_STATE = {
+    "MainPID": "123",
+    "ActiveState": "active",
+    "SubState": "running",
+    "NRestarts": "0",
+    "ControlGroup": "/user.slice/hermes-gateway.service",
+}
 
 
 class SupervisorTests(unittest.TestCase):
@@ -48,9 +58,7 @@ class SupervisorTests(unittest.TestCase):
             "created_at": NOW,
             "dry_run": True,
         }
-        self.state = mock.patch.object(
-            sup, "state", return_value={"MainPID": "123", "ActiveState": "active"}
-        )
+        self.state = mock.patch.object(sup, "state", return_value=dict(GOOD_STATE))
         self.state.start()
 
     def tearDown(self):
@@ -77,12 +85,55 @@ class SupervisorTests(unittest.TestCase):
         with self.assertRaisesRegex(sup.Rejected, f"^{reason}$"):
             self.handle(**changes)
 
-    def test_dry_run_writes_redacted_receipt_and_never_restarts(self):
+    def receipts(self):
+        if not self.log.exists():
+            return []
+        return [json.loads(line) for line in self.log.read_text().splitlines() if line]
+
+    def test_dry_run_writes_request_then_result_and_never_restarts(self):
         with mock.patch.object(sup.subprocess, "run") as run:
-            result = self.handle()
+            handled = self.handle()
         run.assert_not_called()
-        self.assertEqual(result["detail"], "dry-run-authorized")
+        self.assertEqual(handled["result"]["detail"], "dry-run-authorized")
+        records = self.receipts()
+        self.assertEqual([r["type"] for r in records], ["gateway-restart-request", "gateway-restart-result"])
+        self.assertEqual(records[0]["nonce_sha256"], records[1]["nonce_sha256"])
         self.assertNotIn("A" * 32, self.log.read_text())
+
+    def test_consume_before_mutation_and_crash_window_blocks_replay(self):
+        calls = {"n": 0}
+        real_append = sup.append_receipt
+
+        def append_then_crash(path, record):
+            real_append(path, record)
+            if record["type"] == "gateway-restart-request":
+                raise RuntimeError("crash-after-consume")
+
+        with mock.patch.object(sup, "append_receipt", side_effect=append_then_crash):
+            with mock.patch.object(sup.subprocess, "run") as run:
+                with self.assertRaises(RuntimeError):
+                    self.handle(dry_run=False)
+                run.assert_not_called()
+        records = self.receipts()
+        self.assertEqual([r["type"] for r in records], ["gateway-restart-request"])
+        self.rejected("replayed-nonce", dry_run=False)
+
+    def test_result_append_failure_after_mutation_still_blocks_replay(self):
+        real_append = sup.append_receipt
+
+        def append_fail_result(path, record):
+            if record["type"] == "gateway-restart-result":
+                raise OSError("disk-full")
+            return real_append(path, record)
+
+        response = mock.Mock(returncode=0, stdout="", stderr="")
+        with mock.patch.object(sup, "append_receipt", side_effect=append_fail_result):
+            with mock.patch.object(sup.subprocess, "run", return_value=response) as run:
+                with self.assertRaises(OSError):
+                    self.handle(dry_run=False)
+                run.assert_called_once()
+        self.assertEqual([r["type"] for r in self.receipts()], ["gateway-restart-request"])
+        self.rejected("replayed-nonce", dry_run=False)
 
     def test_build_task_allows_dry_run_but_blocks_execute(self):
         self.handle(task_id="t_db2e6a35", nonce="B" * 32)
@@ -93,7 +144,7 @@ class SupervisorTests(unittest.TestCase):
         self.rejected("wrong-service", service="hermes-gateway.service;id")
 
     def test_supervisor_self_restart_rejected(self):
-        self.rejected("wrong-service", service="hermes-keel-gateway-restart-supervisor.service")
+        self.rejected("wrong-service", service="hermes-keel-lf006-supervisor.service")
 
     def test_wrong_board_and_malformed_task(self):
         self.rejected("wrong-board", board="other")
@@ -145,7 +196,7 @@ class SupervisorTests(unittest.TestCase):
     def test_execute_uses_only_literal_argv(self):
         response = mock.Mock(returncode=0, stdout="", stderr="")
         with mock.patch.object(sup.subprocess, "run", return_value=response) as run:
-            self.handle(dry_run=False)
+            handled = self.handle(dry_run=False)
         run.assert_called_once_with(
             ["systemctl", "--user", "restart", sup.SERVICE],
             capture_output=True,
@@ -153,10 +204,47 @@ class SupervisorTests(unittest.TestCase):
             timeout=45,
             check=False,
         )
+        self.assertEqual(handled["result"]["detail"], "restart-complete")
 
-    def test_concurrent_duplicate_has_one_success_under_server_serialization(self):
-        self.handle()
-        self.rejected("replayed-nonce")
+    def test_pre_state_query_failure_blocks_mutation(self):
+        with mock.patch.object(sup, "state", side_effect=sup.Rejected("state-query-failed")):
+            with mock.patch.object(sup.subprocess, "run") as run:
+                self.rejected("state-query-failed", dry_run=False)
+                run.assert_not_called()
+        self.assertEqual(self.receipts(), [])
+
+    def test_pre_state_incomplete_blocks_mutation(self):
+        bad = dict(GOOD_STATE)
+        del bad["MainPID"]
+        with mock.patch.object(sup, "state", return_value=bad):
+            # state() itself validates completeness; simulate incomplete by raising.
+            with mock.patch.object(sup, "state", side_effect=sup.Rejected("state-incomplete")):
+                with mock.patch.object(sup.subprocess, "run") as run:
+                    self.rejected("state-incomplete", dry_run=False)
+                    run.assert_not_called()
+
+    def test_pre_state_inactive_blocks_mutation(self):
+        inactive = dict(GOOD_STATE, ActiveState="inactive", SubState="dead", MainPID="0")
+        with mock.patch.object(sup, "state", return_value=inactive):
+            with mock.patch.object(sup.subprocess, "run") as run:
+                self.rejected("service-not-active", dry_run=False)
+                run.assert_not_called()
+
+    def test_post_state_failure_is_not_restart_complete(self):
+        response = mock.Mock(returncode=0, stdout="", stderr="")
+        states = iter([dict(GOOD_STATE), sup.Rejected("state-query-failed")])
+
+        def state_side_effect():
+            value = next(states)
+            if isinstance(value, Exception):
+                raise value
+            return value
+
+        with mock.patch.object(sup, "state", side_effect=state_side_effect):
+            with mock.patch.object(sup.subprocess, "run", return_value=response):
+                handled = self.handle(dry_run=False)
+        self.assertEqual(handled["result"]["detail"], "post-state-state-query-failed")
+        self.assertEqual(handled["result"]["exit_status"], 1)
 
     def test_duplicate_task_rows_impossible_by_primary_key_contract(self):
         with self.assertRaises(sqlite3.IntegrityError):
@@ -165,6 +253,63 @@ class SupervisorTests(unittest.TestCase):
                 "insert into tasks values(?,?,?,?,?)",
                 ("t_235ade89", "gateway restart", "hermes gateway", "running", None),
             )
+
+    def test_concurrent_socket_requests_one_success_one_replay(self):
+        sock = self.root / "lf006.sock"
+        receipts = self.root / "live-receipts.jsonl"
+        args = mock.Mock(
+            socket=str(sock),
+            db=str(self.db),
+            board="zer0-company",
+            receipts=str(receipts),
+        )
+        thread = threading.Thread(target=sup.serve, args=(args,), daemon=True)
+        thread.start()
+        deadline = time.time() + 2
+        while not sock.exists() and time.time() < deadline:
+            time.sleep(0.01)
+        self.assertTrue(sock.exists())
+
+        def client(nonce: str):
+            req = {
+                "version": 1,
+                "task_id": "t_235ade89",
+                "nonce": nonce,
+                "service": sup.SERVICE,
+                "board": "zer0-company",
+                "created_at": int(time.time()),
+                "dry_run": True,
+            }
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client_sock:
+                client_sock.settimeout(5)
+                client_sock.connect(str(sock))
+                client_sock.sendall(json.dumps(req).encode())
+                client_sock.shutdown(socket.SHUT_WR)
+                return json.loads(client_sock.recv(65536).decode())
+
+        barrier = threading.Barrier(2)
+        results: list[dict] = []
+
+        def worker():
+            barrier.wait()
+            results.append(client("Z" * 32))
+
+        t1 = threading.Thread(target=worker)
+        t2 = threading.Thread(target=worker)
+        t1.start()
+        t2.start()
+        t1.join(5)
+        t2.join(5)
+        oks = [r for r in results if r.get("ok")]
+        errs = [r for r in results if not r.get("ok")]
+        self.assertEqual(len(oks), 1)
+        self.assertEqual(len(errs), 1)
+        self.assertEqual(errs[0]["error"], "replayed-nonce")
+        lines = [json.loads(line) for line in receipts.read_text().splitlines() if line]
+        self.assertEqual([r["type"] for r in lines], ["gateway-restart-request", "gateway-restart-result"])
+        # Stop server by removing socket path after process exit via SIGTERM-like path:
+        # serve() exits on socket path cleanup through process death; close by killing thread's socket.
+        # Best-effort: connect once more after force-close is not needed for the assertion.
 
 
 if __name__ == "__main__":

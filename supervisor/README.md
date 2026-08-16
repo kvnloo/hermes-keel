@@ -12,8 +12,9 @@ The installed unit name is intentionally neutral (`hermes-keel-lf006-supervisor.
 - pinned Kanban SQLite database; the unique task must be `running`, incomplete, and explicitly authorize a Hermes/Telegram gateway restart
 - dry-run is allowed for authorized restart-related tasks, including the supervisor-build task
 - execute (`dry_run=false`) additionally requires an explicit live-restart authorization marker and rejects supervisor-only / "do not perform the actual gateway restart" wording
-- append-only mode-0600 receipts contain only nonce SHA-256, task/caller identity, fixed service, timestamps, pre/post systemd state, and status
-- a malformed receipt log fails closed; nonce replay fails; requests serialize in one process
+- append-only mode-0600 receipts: a `gateway-restart-request` consume receipt is fsynced before any mutation, then a distinct `gateway-restart-result` receipt is appended; replay scanning treats either type as nonce spent
+- complete pre-state is required before mutation; incomplete/failed post-state is never classified as `restart-complete`
+- a malformed receipt log fails closed; nonce replay fails; requests serialize in one accept-loop process
 - the only mutation subprocess has the literal argv `systemctl --user restart hermes-gateway.service`, with a 45-second timeout
 - no root, sudo, Docker socket, arbitrary DB writes, or generic systemctl passthrough
 

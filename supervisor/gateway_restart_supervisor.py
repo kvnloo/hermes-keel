@@ -12,6 +12,7 @@ import socket
 import sqlite3
 import struct
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -22,7 +23,19 @@ SERVICE = "hermes-gateway.service"
 ACTIVE_STATUS = "running"
 MAX_AGE = 120
 MAX_REQUEST = 4096
-RECEIPT_KEYS = {
+STATE_REQUIRED = ("MainPID", "ActiveState", "SubState", "NRestarts", "ControlGroup")
+REQUEST_RECEIPT_KEYS = {
+    "type",
+    "timestamp",
+    "caller_uid",
+    "caller_pid",
+    "task_id",
+    "nonce_sha256",
+    "dry_run",
+    "service",
+    "pre",
+}
+RESULT_RECEIPT_KEYS = {
     "type",
     "timestamp",
     "caller_uid",
@@ -35,6 +48,10 @@ RECEIPT_KEYS = {
     "post",
     "exit_status",
     "detail",
+}
+RECEIPT_TYPES = {
+    "gateway-restart-request": REQUEST_RECEIPT_KEYS,
+    "gateway-restart-result": RESULT_RECEIPT_KEYS,
 }
 # Execute requires an active task whose body positively authorizes a live restart.
 EXECUTE_MARKERS = (
@@ -60,26 +77,41 @@ def canonical_json(value: Any) -> bytes:
 
 
 def state() -> dict[str, Any]:
-    cp = subprocess.run(
-        [
-            "systemctl",
-            "--user",
-            "show",
-            SERVICE,
-            "--property=MainPID,ActiveState,SubState,NRestarts,ControlGroup",
-            "--no-pager",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=5,
-        check=False,
-    )
-    values: dict[str, Any] = {"query_exit": cp.returncode}
+    try:
+        cp = subprocess.run(
+            [
+                "systemctl",
+                "--user",
+                "show",
+                SERVICE,
+                "--property=MainPID,ActiveState,SubState,NRestarts,ControlGroup",
+                "--no-pager",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise Rejected("state-query-timeout") from exc
+    if cp.returncode != 0:
+        raise Rejected("state-query-failed")
+    values: dict[str, Any] = {}
     for line in cp.stdout.splitlines():
         if "=" in line:
             key, value = line.split("=", 1)
             values[key] = value
+    for key in STATE_REQUIRED:
+        if key not in values or values[key] == "":
+            raise Rejected("state-incomplete")
     return values
+
+
+def require_pre_state(pre: dict[str, Any]) -> None:
+    if pre.get("ActiveState") != "active" or pre.get("SubState") != "running":
+        raise Rejected("service-not-active")
+    if not str(pre.get("MainPID", "0")).isdigit() or int(pre["MainPID"]) <= 0:
+        raise Rejected("service-not-active")
 
 
 def validate_request(raw: bytes, *, board: str, now: int) -> dict[str, Any]:
@@ -150,8 +182,12 @@ def load_nonces(receipts: Path) -> set[str]:
                 record = json.loads(line)
             except json.JSONDecodeError as exc:
                 raise Rejected("malformed-receipt") from exc
-            if not isinstance(record, dict) or set(record) != RECEIPT_KEYS:
+            if not isinstance(record, dict) or "type" not in record:
                 raise Rejected("malformed-receipt")
+            expected = RECEIPT_TYPES.get(record["type"])
+            if expected is None or set(record) != expected:
+                raise Rejected("malformed-receipt")
+            # Either a request-consume or a result permanently spends the nonce.
             used.add(record["nonce_sha256"])
     return used
 
@@ -160,10 +196,34 @@ def append_receipt(receipts: Path, record: dict[str, Any]) -> None:
     receipts.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     fd = os.open(receipts, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
-        os.write(fd, canonical_json(record) + b"\n")
+        payload = canonical_json(record) + b"\n"
+        written = 0
+        while written < len(payload):
+            count = os.write(fd, payload[written:])
+            if count <= 0:
+                raise OSError("short receipt write")
+            written += count
         os.fsync(fd)
     finally:
         os.close(fd)
+
+
+def classify_result(*, dry_run: bool, restart_exit: int | None, post: dict[str, Any] | None, post_error: str | None) -> tuple[int, str]:
+    if dry_run:
+        return 0, "dry-run-authorized"
+    if post_error is not None:
+        return 1, f"post-state-{post_error}"
+    if restart_exit is None:
+        return 1, "restart-not-attempted"
+    if restart_exit != 0:
+        return restart_exit, "restart-failed"
+    if post is None:
+        return 1, "post-state-missing"
+    if post.get("ActiveState") != "active" or post.get("SubState") != "running":
+        return 1, "post-state-not-active"
+    if not str(post.get("MainPID", "0")).isdigit() or int(post["MainPID"]) <= 0:
+        return 1, "post-state-not-active"
+    return 0, "restart-complete"
 
 
 def handle(
@@ -184,8 +244,25 @@ def handle(
         raise Rejected("replayed-nonce")
     authorize(db_path, req["task_id"], dry_run=req["dry_run"])
     pre = state()
-    status = 0
-    detail = "dry-run-authorized"
+    require_pre_state(pre)
+
+    # Atomic consume: durable request receipt is fsynced before any mutation.
+    request_record = {
+        "type": "gateway-restart-request",
+        "timestamp": int(time.time()),
+        "caller_uid": caller_uid,
+        "caller_pid": caller_pid,
+        "task_id": req["task_id"],
+        "nonce_sha256": nonce_hash,
+        "dry_run": req["dry_run"],
+        "service": SERVICE,
+        "pre": pre,
+    }
+    append_receipt(receipts, request_record)
+
+    restart_exit: int | None = None
+    post: dict[str, Any] | None = None
+    post_error: str | None = None
     if not req["dry_run"]:
         try:
             cp = subprocess.run(
@@ -195,12 +272,21 @@ def handle(
                 timeout=45,
                 check=False,
             )
-            status = cp.returncode
-            detail = "restart-complete" if status == 0 else "restart-failed"
+            restart_exit = cp.returncode
         except subprocess.TimeoutExpired:
-            status, detail = 124, "restart-timeout"
-    post = state()
-    record = {
+            restart_exit = 124
+    try:
+        post = state()
+    except Rejected as exc:
+        post_error = str(exc)
+
+    exit_status, detail = classify_result(
+        dry_run=req["dry_run"],
+        restart_exit=restart_exit,
+        post=post,
+        post_error=post_error,
+    )
+    result_record = {
         "type": "gateway-restart-result",
         "timestamp": int(time.time()),
         "caller_uid": caller_uid,
@@ -210,12 +296,12 @@ def handle(
         "dry_run": req["dry_run"],
         "service": SERVICE,
         "pre": pre,
-        "post": post,
-        "exit_status": status,
+        "post": post if post is not None else {"error": post_error or "missing"},
+        "exit_status": exit_status,
         "detail": detail,
     }
-    append_receipt(receipts, record)
-    return record
+    append_receipt(receipts, result_record)
+    return {"request": request_record, "result": result_record}
 
 
 def serve(args: argparse.Namespace) -> None:
@@ -227,7 +313,9 @@ def serve(args: argparse.Namespace) -> None:
     server.bind(str(sock_path))
     os.chmod(sock_path, 0o600)
     server.listen(8)
-    signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(0)))
+    # signal handlers are only valid in the main thread (production path).
+    if threading.current_thread() is threading.main_thread():
+        signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(0)))
     try:
         while True:
             conn, _ = server.accept()
@@ -240,17 +328,15 @@ def serve(args: argparse.Namespace) -> None:
                     raw = conn.recv(MAX_REQUEST + 1)
                     if len(raw) > MAX_REQUEST:
                         raise Rejected("request-too-large")
-                    result = {
-                        "ok": True,
-                        "receipt": handle(
-                            raw,
-                            caller_uid=uid,
-                            caller_pid=pid,
-                            db_path=Path(args.db),
-                            board=args.board,
-                            receipts=Path(args.receipts),
-                        ),
-                    }
+                    handled = handle(
+                        raw,
+                        caller_uid=uid,
+                        caller_pid=pid,
+                        db_path=Path(args.db),
+                        board=args.board,
+                        receipts=Path(args.receipts),
+                    )
+                    result = {"ok": True, "receipt": handled["result"], "request": handled["request"]}
                 except Rejected as exc:
                     result = {"ok": False, "error": str(exc)}
                 except Exception:
