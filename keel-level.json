@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "kernel": "hermes-keel",
+  "level": 0,
+  "state": "authorized",
+  "authority": "Kevin / Captain",
+  "invariant": "The Telegram-facing default profile cannot execute project work directly.",
+  "orderedActions": [
+    "provision exactly one canary-worker profile",
+    "remove implementation capabilities from Telegram-facing default",
+    "restart only the default Hermes gateway",
+    "verify the resolved runtime capability inventory",
+    "run one router escape test",
+    "stop"
+  ],
+  "allowedMutations": [
+    "/workspace/zer0/oss/hermes-keel",
+    "/home/kvn/.hermes/profiles/canary-worker",
+    "default Hermes profile tool and Kanban ownership configuration",
+    "default Hermes gateway lifecycle"
+  ],
+  "forbidden": [
+    "product implementation",
+    "Kanban tracer execution",
+    "Firstmate integration",
+    "Paperclip integration",
+    "PM or PMFE integration",
+    "zerOS integration",
+    "portfolio automation",
+    "GPU work",
+    "additional worker profiles"
+  ],
+  "promotion": "No Level 1 action without explicit Captain approval."
+}
