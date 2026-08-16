@@ -94,6 +94,8 @@ def state() -> dict[str, Any]:
         )
     except subprocess.TimeoutExpired as exc:
         raise Rejected("state-query-timeout") from exc
+    except OSError as exc:
+        raise Rejected("state-query-failed") from exc
     if cp.returncode != 0:
         raise Rejected("state-query-failed")
     values: dict[str, Any] = {}

@@ -263,6 +263,10 @@ class SupervisorTests(unittest.TestCase):
             board="zer0-company",
             receipts=str(receipts),
         )
+        restart = mock.Mock(returncode=0, stdout="", stderr="")
+        run_patch = mock.patch.object(sup.subprocess, "run", return_value=restart)
+        run = run_patch.start()
+        self.addCleanup(run_patch.stop)
         thread = threading.Thread(target=sup.serve, args=(args,), daemon=True)
         thread.start()
         deadline = time.time() + 2
@@ -278,7 +282,7 @@ class SupervisorTests(unittest.TestCase):
                 "service": sup.SERVICE,
                 "board": "zer0-company",
                 "created_at": int(time.time()),
-                "dry_run": True,
+                "dry_run": False,
             }
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client_sock:
                 client_sock.settimeout(5)
@@ -305,6 +309,13 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(len(oks), 1)
         self.assertEqual(len(errs), 1)
         self.assertEqual(errs[0]["error"], "replayed-nonce")
+        run.assert_called_once_with(
+            ["systemctl", "--user", "restart", sup.SERVICE],
+            capture_output=True,
+            text=True,
+            timeout=45,
+            check=False,
+        )
         lines = [json.loads(line) for line in receipts.read_text().splitlines() if line]
         self.assertEqual([r["type"] for r in lines], ["gateway-restart-request", "gateway-restart-result"])
         # Stop server by removing socket path after process exit via SIGTERM-like path:
