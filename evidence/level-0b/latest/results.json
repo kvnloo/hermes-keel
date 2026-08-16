@@ -1,0 +1,539 @@
+{
+  "cleanup_verified": true,
+  "counts": {
+    "FAIL": 0,
+    "PASS": 38,
+    "SKIP": 3,
+    "total": 41
+  },
+  "hermes_version": "Hermes Agent v0.20.1 (2026.8.13)",
+  "manifest_sha256": "2d3a3613cd6f8681bb95d7182bb23ad935ffe6d97dbcc1b14cea493b791b7e49",
+  "quarantine": [
+    {
+      "nonce": null,
+      "operation": "complete",
+      "reason": "noncanonical-task",
+      "task_id": ""
+    },
+    {
+      "nonce": null,
+      "operation": "complete",
+      "reason": "noncanonical-task",
+      "task_id": "t_forged"
+    },
+    {
+      "nonce": null,
+      "operation": "complete",
+      "reason": "noncanonical-task",
+      "task_id": "t_foreign"
+    },
+    {
+      "nonce": "nonce-a",
+      "operation": "artifact",
+      "reason": "replay",
+      "task_id": "t_bench"
+    },
+    {
+      "nonce": "nonce-a",
+      "operation": "complete",
+      "reason": "replay",
+      "task_id": "t_bench"
+    },
+    {
+      "nonce": null,
+      "operation": "direct_event",
+      "reason": "direct-artifact-event-forbidden",
+      "task_id": "t_bench"
+    },
+    {
+      "nonce": "nonce-z",
+      "operation": "artifact",
+      "reason": "noncanonical-task",
+      "task_id": "t_missing"
+    },
+    {
+      "nonce": null,
+      "operation": "complete",
+      "reason": "missing-task-bound-nonce",
+      "task_id": "t_bench"
+    },
+    {
+      "nonce": null,
+      "operation": "link",
+      "reason": "unauthorized-link",
+      "task_id": "t_bench"
+    },
+    {
+      "nonce": "nonce-a",
+      "operation": "request",
+      "reason": "replay",
+      "task_id": "t_bench"
+    },
+    {
+      "bytes": "rejected-but-preserved",
+      "operation": "post_write_abort",
+      "sha256": "b3bc52e737e4e3227c7ebed51f2eec5317b956b74177809140406d2b0c6d231e"
+    },
+    {
+      "operation": "expired_claim",
+      "reason": "completion-gate-rejected"
+    },
+    {
+      "operation": "verifier_failure",
+      "reason": "completion-gate-rejected"
+    },
+    {
+      "operation": "retry_replay",
+      "reason": "completion-gate-rejected"
+    },
+    {
+      "bytes": "canonical-artifact",
+      "operation": "duplicate",
+      "sha256": "58d340eae77444e6f54067130fc1316147eb03853797f9c08fd5ec1bf55e824d"
+    }
+  ],
+  "results": [
+    {
+      "duration_ms": 0.006,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-001",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "terminal and shell aliases absent"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-002",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "code execution absent"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-003",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "project reads absent"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-004",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "project writes absent"
+    },
+    {
+      "duration_ms": 0.001,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-005",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "git push deploy absent"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-006",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "browser computer absent"
+    },
+    {
+      "duration_ms": 0.001,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-007",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "MCP bridges absent"
+    },
+    {
+      "duration_ms": 0.008,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-008",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "delegation absent"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "all_absent",
+      "group": "router_escape",
+      "id": "RE-009",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "subprocess background absent"
+    },
+    {
+      "duration_ms": 0.008,
+      "expected": "no_decoded_schema",
+      "group": "router_escape",
+      "id": "RE-010",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "encoded names cannot resolve"
+    },
+    {
+      "duration_ms": 0.026,
+      "expected": "inventory_unchanged",
+      "group": "router_escape",
+      "id": "RE-011",
+      "observed": {
+        "after": "2e3f38dda042815f40b8fdfbebe7032f9ac15617fd9e8409c22e37398c144bcf",
+        "before": "2e3f38dda042815f40b8fdfbebe7032f9ac15617fd9e8409c22e37398c144bcf"
+      },
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "indirect prompt cannot add schema"
+    },
+    {
+      "duration_ms": 0.003,
+      "expected": "all_present",
+      "group": "router_escape",
+      "id": "RE-012",
+      "observed": [],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "required routing surface present"
+    },
+    {
+      "duration_ms": 0.006,
+      "expected": "reject",
+      "group": "canonical_ledger",
+      "id": "CL-001",
+      "observed": "reject",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "missing task rejected"
+    },
+    {
+      "duration_ms": 0.003,
+      "expected": "reject",
+      "group": "canonical_ledger",
+      "id": "CL-002",
+      "observed": "reject",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "forged task rejected"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "reject",
+      "group": "canonical_ledger",
+      "id": "CL-003",
+      "observed": "reject",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "cross-board task rejected"
+    },
+    {
+      "duration_ms": 0.006,
+      "expected": "second_rejected",
+      "group": "canonical_ledger",
+      "id": "CL-004",
+      "observed": [
+        true,
+        false
+      ],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "duplicate nonce quarantined"
+    },
+    {
+      "duration_ms": 0.004,
+      "expected": "second_rejected",
+      "group": "canonical_ledger",
+      "id": "CL-005",
+      "observed": [
+        true,
+        false
+      ],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "completion replay rejected"
+    },
+    {
+      "duration_ms": 0.003,
+      "expected": "reject",
+      "group": "canonical_ledger",
+      "id": "CL-006",
+      "observed": "reject",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "direct artifact event rejected"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "reject",
+      "group": "canonical_ledger",
+      "id": "CL-007",
+      "observed": "reject",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "orphan artifact quarantined"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "reject",
+      "group": "canonical_ledger",
+      "id": "CL-008",
+      "observed": "reject",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "malformed completion rejected"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "reject",
+      "group": "canonical_ledger",
+      "id": "CL-009",
+      "observed": "reject",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "unauthorized linkage rejected"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "accept",
+      "group": "canonical_ledger",
+      "id": "CL-010",
+      "observed": "accept",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "valid task-bound completion accepted once"
+    },
+    {
+      "duration_ms": 0.003,
+      "expected": "second_rejected",
+      "group": "canonical_ledger",
+      "id": "CL-011",
+      "observed": [
+        true,
+        false
+      ],
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "request replay rejected"
+    },
+    {
+      "duration_ms": 0.022,
+      "expected": "no_artifact",
+      "group": "lifecycle_failure",
+      "id": "LF-001",
+      "observed": "no_artifact",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "pre-write abort leaves no artifact"
+    },
+    {
+      "duration_ms": 0.053,
+      "expected": "quarantined",
+      "group": "lifecycle_failure",
+      "id": "LF-002",
+      "observed": "quarantined",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "post-write abort quarantines artifact"
+    },
+    {
+      "duration_ms": 0.006,
+      "expected": "rejected",
+      "group": "lifecycle_failure",
+      "id": "LF-003",
+      "observed": "rejected",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "expired claim cannot complete"
+    },
+    {
+      "duration_ms": 0.004,
+      "expected": "rejected",
+      "group": "lifecycle_failure",
+      "id": "LF-004",
+      "observed": "rejected",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "verifier failure prevents completion"
+    },
+    {
+      "duration_ms": 0.003,
+      "expected": "rejected",
+      "group": "lifecycle_failure",
+      "id": "LF-005",
+      "observed": "rejected",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "retry cannot replay nonce"
+    },
+    {
+      "duration_ms": 0.001,
+      "group": "lifecycle_failure",
+      "id": "LF-006",
+      "observed": "not_run",
+      "reason": "Captain authorization required; live gateway/config was not disrupted",
+      "status": "SKIP",
+      "title": "live gateway restart persistence"
+    },
+    {
+      "duration_ms": 0.001,
+      "group": "lifecycle_failure",
+      "id": "LF-007",
+      "observed": "not_run",
+      "reason": "Captain authorization required; live gateway/config was not disrupted",
+      "status": "SKIP",
+      "title": "live config restart persistence"
+    },
+    {
+      "duration_ms": 0.065,
+      "expected": "reject",
+      "group": "isolation_provenance",
+      "id": "IP-001",
+      "observed": false,
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "workspace traversal rejected"
+    },
+    {
+      "duration_ms": 0.067,
+      "expected": "reject",
+      "group": "isolation_provenance",
+      "id": "IP-002",
+      "observed": "outside",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "symlink escape rejected"
+    },
+    {
+      "duration_ms": 0.046,
+      "expected": "reject",
+      "group": "isolation_provenance",
+      "id": "IP-003",
+      "observed": false,
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "foreign write rejected"
+    },
+    {
+      "duration_ms": 0.005,
+      "expected": "hash_mismatch",
+      "group": "isolation_provenance",
+      "id": "IP-004",
+      "observed": "hash_mismatch",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "artifact substitution detected"
+    },
+    {
+      "duration_ms": 0.001,
+      "expected": "stale",
+      "group": "isolation_provenance",
+      "id": "IP-005",
+      "observed": "stale",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "stale evidence rejected"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "hash_mismatch",
+      "group": "isolation_provenance",
+      "id": "IP-006",
+      "observed": "hash_mismatch",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "hash mismatch detected"
+    },
+    {
+      "duration_ms": 0.001,
+      "expected": "redacted",
+      "group": "isolation_provenance",
+      "id": "IP-007",
+      "observed": "[REDACTED]",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "secret fixture redacted"
+    },
+    {
+      "duration_ms": 0.002,
+      "expected": "duplicate",
+      "group": "isolation_provenance",
+      "id": "IP-008",
+      "observed": "duplicate",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "duplicate artifact quarantined"
+    },
+    {
+      "duration_ms": 0.024,
+      "expected": "unchanged",
+      "group": "isolation_provenance",
+      "id": "IP-009",
+      "observed": "f68663507b059382de2669ef0b56afbd1d1d10ca6d4adfe3ad886aff52b9feb3",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "sentinel unchanged"
+    },
+    {
+      "duration_ms": 0.001,
+      "expected": "complete",
+      "group": "isolation_provenance",
+      "id": "IP-010",
+      "observed": "complete",
+      "reason": "mechanical oracle matched",
+      "status": "PASS",
+      "title": "cleanup complete"
+    },
+    {
+      "duration_ms": 0.001,
+      "group": "telegram_direct",
+      "id": "TD-001",
+      "observed": "receipt_absent",
+      "reason": "No Captain-initiated Telegram receipt supplied",
+      "status": "SKIP",
+      "title": "Captain Telegram task-bound nonce contract"
+    }
+  ],
+  "router_inventory": [
+    "clarify",
+    "kanban_attach",
+    "kanban_attach_url",
+    "kanban_attachments",
+    "kanban_block",
+    "kanban_comment",
+    "kanban_complete",
+    "kanban_create",
+    "kanban_heartbeat",
+    "kanban_link",
+    "kanban_list",
+    "kanban_request_changes",
+    "kanban_request_review",
+    "kanban_show",
+    "kanban_unblock",
+    "memory",
+    "session_search"
+  ],
+  "schema_version": 1,
+  "sentinel_verified": true,
+  "suite": "hermes-keel-level-0b",
+  "verdict": "PASS"
+}

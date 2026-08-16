@@ -17,9 +17,17 @@ MANIFEST_PATH = PACK / "manifest.json"
 REPORT_PATH = PACK / "report.md"
 EXPECTED_PATHS = {
     "verify_level0.py",
+    ".gitignore",
     f"evidence/level-0/{TASK_ID}/nonce.txt",
     f"evidence/level-0/{TASK_ID}/manifest.json",
     f"evidence/level-0/{TASK_ID}/report.md",
+    "benchmarks/level0b/README.md",
+    "benchmarks/level0b/cases.v1.json",
+    "benchmarks/level0b/run.py",
+    "benchmarks/level0b/test_run.py",
+    "evidence/level-0b/latest/results.json",
+    "evidence/level-0b/latest/junit.xml",
+    "evidence/level-0b/latest/summary.md",
 }
 FORBIDDEN_TOOLS = {
     "terminal", "execute_code", "read_file", "write_file", "patch", "search_files",
