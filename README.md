@@ -2,7 +2,25 @@
 
 **A self-evolving, performance-based execution kernel for Hermes Agent.**
 
-Hermes Keel makes orchestration claims mechanically testable. It governs capability boundaries and evidence requirements around Hermes Agent's existing conversation runtime and Kanban execution kernel; it does not replace either.
+[Hermes Agent](https://github.com/NousResearch/hermes-agent) can route work across conversations, tools, profiles, and a durable Kanban board. Hermes Keel is the proposed governance layer that makes claims about that work mechanically testable. It defines capability boundaries, evidence requirements, staged promotion, and rollback around Hermes Agent's existing runtime. It does not replace that runtime or its Kanban execution kernel.
+
+This repository is currently a **Level 0 constitutional and bootstrap specification**. It does not contain an installable Keel plugin or a general-purpose execution backend. Its job today is narrower: define the first safety boundary, prove it in the running Hermes system, and stop before adding more machinery.
+
+## Start here
+
+Read this document from top to bottom before changing a Hermes configuration or dispatching work. The safe first action is inspection, not installation or implementation.
+
+For a Hermes harness, open a session in this checkout with the supported working-directory flag:
+
+```sh
+hermes --in /path/to/hermes-keel
+```
+
+Then give the harness this instruction:
+
+> Read `README.md`. Treat "Current scope" as the complete authorization boundary. Inspect the live Hermes configuration and runtime evidence before proposing any change. Do not implement Level 1 or later, do not assume a Keel plugin exists, and stop after reporting whether Level 0 is satisfied.
+
+The command only starts Hermes in this repository; it does not install or activate Keel. See the [Hermes Agent documentation](https://hermes-agent.nousresearch.com/docs) for Hermes installation and CLI setup.
 
 ## North star
 
@@ -12,9 +30,9 @@ Maximize verified useful progress per unit of time, compute, Captain attention, 
 
 - **Hermes Agent owns:** messaging, profiles, tools, sessions, Kanban tasks/runs, and worker processes.
 - **Keel owns:** role capabilities, execution invariants, evidence chains, adversarial probes, performance policy, governed evolution, and rollback.
-- **Firstmate owns:** optional subordinate supervision, Second Mates, Crewmates, worktrees, validation, and PR lifecycle for an authorized Hermes task.
-- **PM owns:** product, portfolio, and project intent, prioritization, acceptance criteria, and company-level semantics.
-- **Paperclip, PMFE, zerOS, dashboards, and tmux are projections:** they never define execution truth.
+- **[Firstmate](https://github.com/kunchenguid/firstmate) may own:** optional subordinate supervision, worker crews, worktrees, validation, and the pull-request lifecycle for an already authorized Hermes task. It is a complementary subordinate executor, not a co-equal source of execution truth.
+- **[PM](https://github.com/kvnloo/_pm) may own:** product, portfolio, and project intent, prioritization, acceptance criteria, and company-level semantics. It is a complementary intent and management system, not a co-equal source of execution truth.
+- **External dashboards and projections may display state:** they never define execution truth.
 
 ## Constitutional rule
 
@@ -48,3 +66,11 @@ Only **Level 0** is authorized:
 4. Stop.
 
 A Kanban tracer and product work are not authorized until Level 1.
+
+## Resources
+
+- [Hermes Agent source](https://github.com/NousResearch/hermes-agent)
+- [Hermes Agent documentation](https://hermes-agent.nousresearch.com/docs)
+- [Hermes Agent Kanban documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban)
+- [Firstmate source](https://github.com/kunchenguid/firstmate)
+- [PM public mirror](https://github.com/kvnloo/_pm)
