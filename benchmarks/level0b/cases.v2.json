@@ -11,6 +11,11 @@
     "artifact_template": "evidence/level-0b/telegram-direct/{task_id}/nonce.txt",
     "required_fields": ["task_id", "run_id", "comments", "artifacts", "router_evidence"]
   },
+  "gateway_restart_contract": {
+    "version": 2,
+    "task_id": "t_235ade89",
+    "required_fields": ["task_id", "service", "dry_run", "exit_status", "detail", "nonce_sha256", "pre", "post"]
+  },
   "authorized_evidence": [
     {
       "task_id": "t_72294ce7",

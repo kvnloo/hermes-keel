@@ -71,6 +71,20 @@ def authorized_level0b_paths() -> set[str]:
                 or len(data) != record.get("size_bytes")):
             fail(f"Level 0B authorized artifact binding differs: {rel}")
         authorized.add(rel)
+    gateway_root = "evidence/level-0b/gateway-restart/t_235ade89"
+    restart = json.loads((ROOT / gateway_root / "restart-result.json").read_text(encoding="utf-8"))
+    probe = json.loads((ROOT / gateway_root / "probe.json").read_text(encoding="utf-8"))
+    if (restart.get("task_id") != "t_235ade89" or restart.get("service") != "hermes-gateway.service"
+            or restart.get("dry_run") is not False or restart.get("exit_status") != 0
+            or restart.get("detail") != "restart-complete"
+            or restart.get("pre", {}).get("MainPID") == restart.get("post", {}).get("MainPID")
+            or probe.get("scope") != {"lf006_only": True, "lf007_not_run": True, "level1_not_advanced": True}
+            or probe.get("config", {}).get("unchanged") is not True
+            or probe.get("router", {}).get("forbidden_capability_classes_absent") is not True):
+        fail("Level 0B gateway restart evidence is malformed")
+    authorized.update({f"{gateway_root}/restart-result.json", f"{gateway_root}/probe.json",
+                       f"{gateway_root}/report.md", f"{gateway_root}/benchmark/results.json",
+                       f"{gateway_root}/benchmark/junit.xml", f"{gateway_root}/benchmark/summary.md"})
     return authorized
 
 

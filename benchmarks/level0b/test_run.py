@@ -78,6 +78,19 @@ class Level0BTests(unittest.TestCase):
         self.assertFalse(ledger.apply("complete", "t_bench", "nonce-a"))
         self.assertEqual("replay", quarantine[0]["reason"])
 
+    def test_v2_gateway_restart_contract_is_exact_and_fail_closed(self):
+        contract = {"task_id": "t_235ade89", "required_fields": ["task_id", "service", "dry_run", "exit_status", "detail", "nonce_sha256", "pre", "post"]}
+        state = {"ActiveState": "active", "SubState": "running", "MainPID": "10"}
+        receipt = {"task_id": "t_235ade89", "service": "hermes-gateway.service", "dry_run": False,
+                   "exit_status": 0, "detail": "restart-complete", "nonce_sha256": "a" * 64,
+                   "pre": state, "post": {**state, "MainPID": "11"}}
+        self.assertTrue(mod.verify_gateway_restart_v2(receipt, contract)[0])
+        for key, value in (("dry_run", True), ("exit_status", 1), ("detail", "dry-run-authorized")):
+            mutation = dict(receipt); mutation[key] = value
+            self.assertFalse(mod.verify_gateway_restart_v2(mutation, contract)[0])
+        mutation = json.loads(json.dumps(receipt)); mutation["post"]["MainPID"] = "10"
+        self.assertFalse(mod.verify_gateway_restart_v2(mutation, contract)[0])
+
     def test_ledger_rejects_orphan(self):
         quarantine = []
         self.assertFalse(mod.Ledger(quarantine).apply("artifact", "t_missing", "nonce-a"))

@@ -1,0 +1,24 @@
+{
+  "task_id": "t_235ade89",
+  "service": "hermes-gateway.service",
+  "dry_run": false,
+  "exit_status": 0,
+  "detail": "restart-complete",
+  "nonce_sha256": "49b41c5d99bbe40a04e7fb275ec0881f63df84111c67c989c4d2bafbd070804b",
+  "pre": {
+    "ActiveState": "active",
+    "SubState": "running",
+    "MainPID": "1452955",
+    "NRestarts": "0",
+    "ControlGroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/hermes-gateway.service"
+  },
+  "post": {
+    "ActiveState": "active",
+    "SubState": "running",
+    "MainPID": "3696175",
+    "NRestarts": "0",
+    "ControlGroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/hermes-gateway.service"
+  },
+  "request_timestamp": 1786914095,
+  "result_timestamp": 1786914097
+}

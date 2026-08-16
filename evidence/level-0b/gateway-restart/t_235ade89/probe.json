@@ -1,0 +1,44 @@
+{
+  "schema_version": 2,
+  "acceptance_claim": false,
+  "task": {"id": "t_235ade89", "restart_run_id": 44, "verification_run_id": 46, "worker_profile": "canary-worker"},
+  "service": {
+    "name": "hermes-gateway.service",
+    "request_timestamp": 1786914095,
+    "result_timestamp": 1786914097,
+    "downtime_bound_seconds": 2,
+    "pre_pid": 1452955,
+    "post_pid": 3696175,
+    "post_active": true,
+    "post_substate": "running",
+    "post_nrestarts": 0,
+    "duplicate_gateway_main_processes": 0
+  },
+  "router": {
+    "platform": "telegram",
+    "resolved_tools": ["clarify", "kanban_attach", "kanban_attach_url", "kanban_attachments", "kanban_block", "kanban_comment", "kanban_complete", "kanban_create", "kanban_heartbeat", "kanban_link", "kanban_request_changes", "kanban_request_review", "kanban_show", "memory", "session_search"],
+    "forbidden_capability_classes_absent": true,
+    "kanban_routing_available": true
+  },
+  "telegram_transport": {
+    "adapter_reconnect_attempt_logged": true,
+    "gateway_owned_established_telegram_tls_connections": 2,
+    "telegram_remote_ipv6": "2001:67c:4e8:f004::9",
+    "healthy": true
+  },
+  "config": {
+    "unchanged": true,
+    "items": [
+      {"path": "/workspace/hermes-home/config.yaml", "sha256_pre": "ef2b98227043125a603d6d7d05fc2275746c269228dd33c1060b6beb45325c62", "sha256_post": "ef2b98227043125a603d6d7d05fc2275746c269228dd33c1060b6beb45325c62", "mtime_ns": 1786861668395253015},
+      {"path": "/home/kvn/.config/systemd/user/hermes-gateway.service", "sha256_pre": "3ff10f5b352d3f41026a4c1b0c2cc5a9159b867415afaf0180a0bb976b9f5306", "sha256_post": "3ff10f5b352d3f41026a4c1b0c2cc5a9159b867415afaf0180a0bb976b9f5306", "mtime_ns": 1785826789325503643},
+      {"path": "/workspace/hermes-home/.env", "sha256_pre": "70047feb958ffb4f24a04bfa92acea924c2c40462642df3ba15756594a8921ed", "sha256_post": "70047feb958ffb4f24a04bfa92acea924c2c40462642df3ba15756594a8921ed", "mtime_ns": 1786681891678466079}
+    ]
+  },
+  "log_review": {
+    "unexpected_default_router_tool_loading": false,
+    "message_replay_observed": false,
+    "gateway_start_errors": false,
+    "notes": ["Global gateway startup logged pre-existing parked MCP authentication/connectivity warnings; mechanically resolved default Telegram router remained MCP-free.", "Old gateway exited status 1 after bounded SIGTERM shutdown, then systemd completed the explicit restart and new service remained active."]
+  },
+  "scope": {"lf006_only": true, "lf007_not_run": true, "level1_not_advanced": true}
+}

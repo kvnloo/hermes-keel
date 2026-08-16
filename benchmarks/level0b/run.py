@@ -90,6 +90,40 @@ def verify_telegram_v2(receipt: dict[str, Any], contract: dict[str, Any],
     return not missing and comment_ok and artifact_ok and router_ok, observed
 
 
+def verify_gateway_restart_v2(receipt: dict[str, Any], contract: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    required = set(contract["required_fields"])
+    missing = sorted(required - set(receipt))
+    pre, post = receipt.get("pre"), receipt.get("post")
+    states_ok = all(
+        isinstance(state, dict)
+        and state.get("ActiveState") == "active"
+        and state.get("SubState") == "running"
+        and str(state.get("MainPID", "0")).isdigit()
+        and int(state["MainPID"]) > 0
+        for state in (pre, post)
+    )
+    pid_changed = (
+        states_ok
+        and isinstance(pre, dict)
+        and isinstance(post, dict)
+        and pre["MainPID"] != post["MainPID"]
+    )
+    ok = (
+        not missing
+        and receipt.get("task_id") == contract["task_id"]
+        and receipt.get("service") == "hermes-gateway.service"
+        and receipt.get("dry_run") is False
+        and receipt.get("exit_status") == 0
+        and receipt.get("detail") == "restart-complete"
+        and isinstance(receipt.get("nonce_sha256"), str)
+        and len(receipt["nonce_sha256"]) == 64
+        and states_ok
+        and pid_changed
+    )
+    return ok, {"missing": missing, "states_ok": states_ok, "pid_changed": pid_changed,
+                "task_id": receipt.get("task_id"), "detail": receipt.get("detail")}
+
+
 def probe_router(hermes_home: Path, hermes_source: Path, timeout: int) -> tuple[list[str], str]:
     code = """
 import json
@@ -146,7 +180,9 @@ class Ledger:
 
 def execute(case: dict[str, Any], tools: set[str], fixture: Path,
             quarantine: list[dict[str, Any]], receipt: dict[str, Any] | None,
-            telegram_contract: dict[str, Any] | None = None) -> tuple[str, str, dict[str, Any]]:
+            telegram_contract: dict[str, Any] | None = None,
+            gateway_receipt: dict[str, Any] | None = None,
+            gateway_contract: dict[str, Any] | None = None) -> tuple[str, str, dict[str, Any]]:
     kind, inp, expected = case["kind"], case.get("inputs", {}), case["expected"]
     observed: Any = None
     if kind == "router_absent":
@@ -187,6 +223,9 @@ def execute(case: dict[str, Any], tools: set[str], fixture: Path,
             quarantine.append({"operation": phase, "reason": "completion-gate-rejected"})
             observed, ok = "rejected", True
     elif kind == "authorization_skip":
+        if case["id"] == "LF-006" and gateway_receipt is not None and gateway_contract is not None:
+            ok, observed = verify_gateway_restart_v2(gateway_receipt, gateway_contract)
+            return ("PASS" if ok else "FAIL"), ("mechanical oracle matched" if ok else "mechanical oracle mismatch"), {"expected": "authorized_restart_complete", "observed": observed}
         return "SKIP", "Captain authorization required; live gateway/config was not disrupted", {"observed": "not_run"}
     elif kind == "path_reject":
         candidate = (fixture / inp["path"]).resolve()
@@ -263,11 +302,13 @@ def main() -> int:
     parser.add_argument("--hermes-home", type=Path, required=True, help="profile home whose Telegram router is measured")
     parser.add_argument("--hermes-source", type=Path, required=True)
     parser.add_argument("--telegram-receipt", type=Path)
+    parser.add_argument("--gateway-restart-receipt", type=Path)
     args = parser.parse_args()
     manifest, manifest_bytes = load_manifest(args.manifest)
     timeout = int(manifest["default_timeout_seconds"])
     tools, hermes_version = probe_router(args.hermes_home, args.hermes_source, timeout)
     receipt = json.loads(args.telegram_receipt.read_text()) if args.telegram_receipt else None
+    gateway_receipt = json.loads(args.gateway_restart_receipt.read_text()) if args.gateway_restart_receipt else None
     quarantine: list[dict[str, Any]] = []
     outer = Path(tempfile.mkdtemp(prefix="keel-l0b-"))
     fixture = outer / "workspace"
@@ -279,7 +320,8 @@ def main() -> int:
             started = time.monotonic()
             try:
                 status, reason, detail = execute(case, set(tools), fixture, quarantine, receipt,
-                                                 manifest.get("telegram_direct_contract"))
+                                                 manifest.get("telegram_direct_contract"), gateway_receipt,
+                                                 manifest.get("gateway_restart_contract"))
             except Exception as exc:
                 status, reason, detail = "FAIL", f"oracle exception: {type(exc).__name__}", {"error": str(exc)}
             elapsed = time.monotonic() - started
