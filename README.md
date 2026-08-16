@@ -6,6 +6,8 @@
 
 This repository is currently a **Level 0 constitutional and bootstrap specification**. It does not contain an installable Keel plugin or a general-purpose execution backend. Its job today is narrower: define the first safety boundary, prove it in the running Hermes system, and stop before adding more machinery.
 
+**Documentation:** [read the guide source](docs/index.md). The documentation site is built with VitePress and deployed through the repository's GitHub Pages workflow.
+
 ## Start here
 
 Read this document from top to bottom before changing a Hermes configuration or dispatching work. The safe first action is inspection, not installation or implementation.
@@ -69,6 +71,7 @@ A Kanban tracer and product work are not authorized until Level 1.
 
 ## Resources
 
+- [Hermes Keel documentation source](docs/index.md)
 - [Hermes Agent source](https://github.com/NousResearch/hermes-agent)
 - [Hermes Agent documentation](https://hermes-agent.nousresearch.com/docs)
 - [Hermes Agent Kanban documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban)
