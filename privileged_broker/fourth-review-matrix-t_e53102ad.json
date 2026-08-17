@@ -1,0 +1,40 @@
+{
+  "task": "t_e53102ad",
+  "model_route": "gpt-5.6-luna",
+  "verdict": "code_ready_captain_ceremony_separate",
+  "self_approved": false,
+  "privileged_action_performed": false,
+  "findings": {
+    "TR-001": "closed_tested",
+    "TR-002": "closed_tested",
+    "F-001": "closed_tested",
+    "F-005": "closed_tested",
+    "K-001": "closed_tested",
+    "K-003": "closed_tested_prior_preserved",
+    "K-004": "closed_tested_prior_preserved",
+    "F-002": "partial_live_gate",
+    "F-003": "partial_live_gate",
+    "F-004": "open_live_gate",
+    "K-002": "open_live_gate",
+    "K-005": "partial_live_gate",
+    "K-006": "open_live_gate",
+    "K-007": "partial_live_gate",
+    "K-008": "open_live_gate"
+  },
+  "tests": {
+    "pytest": "68 passed",
+    "unittest": "36 passed",
+    "py_compile": "pass",
+    "shell_syntax": "pass",
+    "diff_check": "pass",
+    "shellcheck": "unavailable"
+  },
+  "constraints": {
+    "sudo_used": false,
+    "pkexec_used": false,
+    "install_performed": false,
+    "approval_created": false,
+    "service_mutated": false,
+    "ollama_mutated": false
+  }
+}

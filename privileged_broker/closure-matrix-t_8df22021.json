@@ -1,0 +1,45 @@
+{
+  "task": "t_8df22021",
+  "verdict_requested": "independent_fourth_review",
+  "self_approved": false,
+  "privileged_action_performed": false,
+  "code_findings": {
+    "TR-001": "closed_tested",
+    "TR-002": "closed_tested",
+    "F-001": "closed_tested",
+    "F-005": "closed_tested",
+    "K-001": "closed_tested",
+    "K-003": "closed_tested_prior_preserved",
+    "K-004": "closed_tested_prior_preserved"
+  },
+  "live_ceremony_gates": {
+    "F-002": "partial_gated",
+    "F-003": "partial_gated",
+    "F-004": "open_gated",
+    "K-002": "open_gated",
+    "K-005": "partial_gated",
+    "K-006": "open_gated",
+    "K-007": "partial_gated",
+    "K-008": "open_gated"
+  },
+  "tests": {
+    "pytest": "68 passed",
+    "unittest": "61 passed",
+    "prior_four_probes": "pass",
+    "third_review_three_probes": "pass with defect assertions inverted to safety assertions",
+    "new_fence_generation_matrix": "8 passed",
+    "py_compile": "pass",
+    "shell_syntax": "pass",
+    "sudoers_syntax": "pass",
+    "diff_check": "pass",
+    "shellcheck": "unavailable"
+  },
+  "constraints": {
+    "sudo_used": false,
+    "pkexec_used": false,
+    "install_performed": false,
+    "approval_created": false,
+    "service_mutated": false,
+    "ollama_mutated": false
+  }
+}

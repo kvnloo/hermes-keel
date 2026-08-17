@@ -1,0 +1,38 @@
+{
+  "task": "t_3b6ac7a1",
+  "authoritative_review": "t_0bb55798",
+  "independent_rereview": "t_28a8c942",
+  "rereview_additional_parent": "t_aa62402d",
+  "status": "implementation_reworked_tests_passed_pending_independent_review",
+  "bootstrap_suitable_claimed": false,
+  "privileged_actions_performed": false,
+  "findings_addressed": [
+    {"id": "F-001", "implementation": "checked rollback commands and byte/runtime/listener post-state; exact failure evidence; rollback_ok false on ambiguity", "regression": "test_f001_rollback_failure_preserves_exact_status_and_never_claims_success"},
+    {"id": "F-002", "implementation": "request-bound effective fragment/drop-ins/exec/environment/process/listener/model-store snapshot with pre-mutation and rollback drift checks", "regression": "test_f002_complete_pre_state_is_bound_and_drift_rejected_before_write"},
+    {"id": "F-003", "implementation": "unique MainPID daemon, localhost-only listeners, executable/version/hash, CUDA maps/devices, model manifest, exact fixed smoke and benchmark", "regression": "test_f003_public_unknown_and_duplicate_runtime_fail_closed"},
+    {"id": "F-004", "implementation": "unprivileged hashed package including installer; root-owned immutable package checks; destination staging/fsync/policy-last activation", "regression": "test_f004_unprivileged_builder_emits_self_verifying_sealed_package"},
+    {"id": "F-005", "implementation": "sequence/previous-hash/record-hash/HMAC identity-bound durable chain verified before action and after append", "regression": "test_f005_chain_detects_edit_truncation_reorder_and_wrong_key"}
+  ],
+  "tests": {
+    "pytest": {"passed": 53, "failed": 0},
+    "unittest_discovery": {"passed": 46, "failed": 0},
+    "py_compile": "pass",
+    "shell_syntax": "pass",
+    "sudoers_syntax": "pass",
+    "diff_check": "pass",
+    "static_scan": "pass",
+    "shellcheck": "unavailable"
+  },
+  "sha256": {
+    "privileged_broker/core.py": "822fa72f5ed6a88129556d68130eec693a93c5a9185fe36995465276c9826d32",
+    "privileged_broker/broker.py": "2e9a98ed163dc78c29759dab23d419287405b19160a1f48980f124ea48ff1e60",
+    "privileged_broker/build-package.sh": "e443bfe798eb6af99faceb5ce4a160ccbb6ed1e372b8da0816dbea0fd11ff5b4",
+    "privileged_broker/install.sh": "2d93710fde9cdd1cbf429aedfa7c6f99087671be845d79bb73de76321f68ee3d",
+    "privileged_broker/uninstall.sh": "60c87fbc1a9448b5036ce0d354e545f2f15d9339261cbf8a3bb3f1a11f0d371e",
+    "privileged_broker/hermes-privileged-broker.sudoers": "259551c7e8874ce402e7408ef5b31820a1d940e7916b683d4d695a87a1211f5f",
+    "privileged_broker/README.md": "065468ca9f768f80953ad1ffe68a3df4aa825e1388a3467cbd4986bc72c70053",
+    "privileged_broker/test_broker.py": "30fa1f456efff35f10eb1d0a1709a6d3417ede5d95f990db427b61ba9c102a70",
+    "privileged_broker/test_adversarial_review.py": "77bb976619a6ee79f8aee3c73ea74bee9df41f2b295a94bbaef7986677534610",
+    "privileged_broker/test_rework.py": "634349a9e4fa408a67fa6abdcfc28c4579eb4f05b7f9e5cf524f7253e0ffe28e"
+  }
+}

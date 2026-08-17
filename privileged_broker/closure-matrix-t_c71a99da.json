@@ -1,0 +1,24 @@
+{
+  "schema": "keel.privileged-broker-closure.v1",
+  "task": "t_c71a99da",
+  "approval_claim": false,
+  "bootstrap_authorized": false,
+  "privileged_actions_performed": false,
+  "findings": [
+    {"id":"F-001","status":"closed_tested","symbols":["core.execute","core._phase","OllamaBackend.rollback"],"tests":["test_precheck_failure_does_not_spend_authority_or_call_rollback","test_result_append_crash_records_recovery_required","test_f001_rollback_failure_preserves_exact_status_and_never_claims_success"]},
+    {"id":"F-002","status":"partial_gated","symbols":["broker.load","broker.load_captain_request","OllamaBackend.rollback"],"tests":["test_f002_complete_pre_state_is_bound_and_drift_rejected_before_write"],"gate":"broader process/model/systemd descriptor identity requires independent rehearsal"},
+    {"id":"F-003","status":"partial_gated","symbols":["OllamaBackend._assert_local_unique","OllamaBackend._cuda_evidence"],"tests":["test_f003_public_unknown_and_duplicate_runtime_fail_closed"],"gate":"sustained L3 production benchmark and socket/process identity rehearsal"},
+    {"id":"F-004","status":"partial_gated","symbols":["install.sh:cleanup"],"tests":["test_f004_unprivileged_builder_emits_self_verifying_sealed_package"],"gate":"descriptor-relative package walk and kill-at-every-boundary matrix"},
+    {"id":"F-005","status":"closed_tested","symbols":["core.verify_chain","core.append_chain","core._checkpoint_key"],"tests":["test_complete_tail_truncation_is_detected","test_f005_chain_detects_edit_truncation_reorder_and_wrong_key"]},
+    {"id":"K-001","status":"closed_tested","symbols":["core.execute","core.task_active"],"tests":["test_task_finishing_after_precheck_prevents_mutation","test_terminal_task_or_run_fails"]},
+    {"id":"K-002","status":"partial_gated","symbols":["broker.load","core.task_active"],"tests":["test_symlink_db_and_receipt_rejected"],"gate":"SQLite descriptor/owner/mode sealing"},
+    {"id":"K-003","status":"closed_tested","symbols":["OllamaBackend.rollback"],"tests":["test_f001_rollback_failure_preserves_exact_status_and_never_claims_success"]},
+    {"id":"K-004","status":"closed_tested","symbols":["broker.load_captain_request","broker.main"],"tests":["test_packet_change_after_approval_fails"]},
+    {"id":"K-005","status":"partial_gated","symbols":["core.execute"],"tests":["test_malicious_health_output_not_logged"],"gate":"complete secret-canary matrix"},
+    {"id":"K-006","status":"partial_gated","symbols":["core._records"],"tests":["test_duplicate_valid_approval_is_ambiguous"],"gate":"approval-chain idempotency and executor identity policy"},
+    {"id":"K-007","status":"closed_static","symbols":["uninstall.sh"],"tests":["shell syntax and static residue assertions"],"gate":"independent privileged uninstall rehearsal remains forbidden in this task"},
+    {"id":"K-008","status":"partial_gated","symbols":["core constants","install.sh"],"tests":[],"gate":"sealed install-time host/filesystem/policy identity manifest"}
+  ],
+  "verification": {"pytest":"57 passed","unittest":"50 passed","py_compile":"pass","shell_syntax":"pass","visudo":"pass","diff_check":"pass","shellcheck":"unavailable"},
+  "artifacts": ["privileged_broker/repair-report-t_c71a99da.md","privileged_broker/closure-matrix-t_c71a99da.json"]
+}

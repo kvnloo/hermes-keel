@@ -1,0 +1,40 @@
+{
+  "schema": "keel.v2-ceremony-rehearsal.v1",
+  "task": "t_57f3c660",
+  "run": 152,
+  "action": "ollama-system-runtime-switch-v2",
+  "verdict": "rootless_rehearsal_complete_independent_review_required",
+  "live_request_created": false,
+  "approval_created": false,
+  "privileged_action_performed": false,
+  "service_or_ollama_mutated": false,
+  "package": {
+    "path": "/var/tmp/hermes-keel-v2-package-t_57f3c660-r152",
+    "manifest_sha256": "4ec4025ace79cbc02a9b3fe45018f8b218f39fcc367bf1081327109df66cf47a",
+    "runtime_member_sha256": "d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4",
+    "runtime_bytes": 39138928,
+    "installed_runtime": "/usr/local/lib/hermes-privileged-broker/runtimes/sha256-d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4/ollama",
+    "owner": "uid-1000 candidate; future ceremony must transfer beneath non-user-renamable root-owned parent and reverify",
+    "content_addressed": true
+  },
+  "gates": {
+    "F-002": "closed_by_v2_descriptor_schema_and_synthetic_binding",
+    "F-003": "closed_for_bounded_synthetic_rehearsal_only; live sustained 3B/7B/27B remains ceremony evidence",
+    "F-004": "closed_by_complete_manifest_and_kill_at_each_publication_fixture",
+    "K-002": "closed_by_board/package/runtime identity fields; live descriptors captured only by future request",
+    "K-005": "closed_by_allowlisted health result and secret-output regression",
+    "K-006": "closed_by_v2 package/hash/executor binding plus existing approval/replay tests",
+    "K-007": "closed_by_no-root install/uninstall/rollback cleanup fixture",
+    "K-008": "closed_by explicit action/package/runtime/board/install-path schema; live host identity is future request evidence"
+  },
+  "crash_phases": ["stage", "copy", "library", "launcher", "state", "policy"],
+  "retired": ["ollama-system-runtime-switch-v1", "request schema version 1", "historical packets without sealed_package"],
+  "constraints": {
+    "sudo_used": false,
+    "pkexec_used": false,
+    "root_install_performed": false,
+    "approval_or_receipt_created": false,
+    "service_mutated": false,
+    "ollama_mutated": false
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "task": "t_07a52e57",
+  "run": 149,
+  "host": "groot",
+  "observed_at": "2026-08-17T17:08:15-05:00",
+  "verdict": "blocked_fail_closed_no_request",
+  "request_created": false,
+  "approval_command_created": false,
+  "privileged_action_performed": false,
+  "constraints_observed": {
+    "sudo_used": false,
+    "pkexec_used": false,
+    "install_performed": false,
+    "approval_created": false,
+    "service_mutated": false,
+    "ollama_mutated": false,
+    "lf007_run": false,
+    "level1_run": false
+  },
+  "blocking_findings": {
+    "authority_action_mismatch": "task authorizes ollama-system-runtime-switch-v1 but reviewed code fixes ollama-system-runtime-switch-v2",
+    "F-002": "target runtime is uid-1000-owned and mutable",
+    "F-003": "sustained live 3B/7B/27B CUDA evidence absent",
+    "F-004": "descriptor-relative ingestion and kill-boundary rehearsal absent",
+    "K-002": "canonical DB/package/runtime descriptor identities not sealed",
+    "K-005": "complete secret-canary matrix absent",
+    "K-006": "installed approval/key/checkpoint/executor identity evidence absent",
+    "K-007": "privileged uninstall/restoration rehearsal prohibited and absent",
+    "K-008": "install-time host/UID/path/device/policy identity manifest absent"
+  },
+  "package": {
+    "path": "/var/tmp/hermes-broker-package-t_07a52e57-run149-1787004500",
+    "manifest_sha256": "04dd0fdc2c3d0416114fb907d0ca56361d9f19e61bfc273d1a64c1dd7d3d370f",
+    "owner_uid": 1000,
+    "root_sealed": false
+  },
+  "rollback_binary_sha256": "ab27361e1e4c70a5aed215cce0cf6033bbf61650a0eb7e4b63cf01c76a06353a",
+  "target_binary_sha256": "d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4",
+  "tests": {
+    "pytest": "68 passed",
+    "unittest": "36 passed",
+    "py_compile": "pass",
+    "shell_syntax": "pass",
+    "diff_check": "pass"
+  }
+}

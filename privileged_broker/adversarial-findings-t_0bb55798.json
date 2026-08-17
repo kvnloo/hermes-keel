@@ -1,0 +1,32 @@
+{
+  "task": "t_0bb55798",
+  "reviewed_parent": "t_9966a8c5",
+  "verdict": "changes_required",
+  "bootstrap_suitable": false,
+  "privileged_actions_performed": false,
+  "findings": [
+    {"id":"F-001","severity":"high","title":"rollback ignores systemctl failures and can falsely record rollback_ok=true","locations":["privileged_broker/core.py:185-186"]},
+    {"id":"F-002","severity":"high","title":"claimed expected pre-state and rollback target are not fully verified or sealed","locations":["privileged_broker/core.py:66-68","privileged_broker/core.py:166-170","privileged_broker/core.py:185-186"]},
+    {"id":"F-003","severity":"high","title":"success gate does not detect public/duplicate listeners or prove CUDA backend","locations":["privileged_broker/core.py:177-184"]},
+    {"id":"F-004","severity":"high","title":"root bootstrap copies mutable user-owned relative sources without a sealed manifest or atomic install","locations":["privileged_broker/install.sh:5-13"]},
+    {"id":"F-005","severity":"medium","title":"consume/result ledger is neither MACed nor hash-chained","locations":["privileged_broker/core.py:148-160"]}
+  ],
+  "tests": {
+    "pytest": {"passed": 48, "failed": 0},
+    "unittest_discovery": {"passed": 41, "failed": 0},
+    "new_adversarial_tests": 5,
+    "py_compile": "pass",
+    "shell_syntax": "pass",
+    "sudoers_syntax": "pass",
+    "diff_check": "pass"
+  },
+  "sha256": {
+    "privileged_broker/core.py":"6808c285408ceffd6d0e596c6eea09d7e4350761616807db19b7800325222b79",
+    "privileged_broker/broker.py":"b6023a14f177c0f3ebfa74220f315da434de146f27f7f6711bb89c5d8f697067",
+    "privileged_broker/install.sh":"34c078b8c1d07a847dacbbc9673994523955ca8a09000c3b8924ec79b3c9c2c6",
+    "privileged_broker/uninstall.sh":"60c87fbc1a9448b5036ce0d354e545f2f15d9339261cbf8a3bb3f1a11f0d371e",
+    "privileged_broker/hermes-privileged-broker.sudoers":"259551c7e8874ce402e7408ef5b31820a1d940e7916b683d4d695a87a1211f5f",
+    "privileged_broker/requests/t_9966a8c5-run66-ollama.json_file_bytes":"776f77d541868c28c4c091df8b52227f22da313837bcef37a1e12c90dd90c1ee",
+    "privileged_broker/test_adversarial_review.py":"77bb976619a6ee79f8aee3c73ea74bee9df41f2b295a94bbaef7986677534610"
+  }
+}

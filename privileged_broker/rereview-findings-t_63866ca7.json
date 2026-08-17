@@ -1,0 +1,68 @@
+{
+  "schema": "keel.privileged-broker-rereview.v1",
+  "task": "t_63866ca7",
+  "verdict": "changes_required",
+  "bootstrap_suitable": false,
+  "captain_ceremony_suitable": false,
+  "privileged_actions_performed": false,
+  "shellcheck": "unavailable",
+  "source_state": {
+    "branch": "main",
+    "privileged_broker_git_state": "untracked",
+    "sealed_commit_available": false
+  },
+  "findings": [
+    {"id":"F-001","severity":"high","status":"partial_open","summary":"Checked rollback improved, but no phase journal; preflight failure is spent and triggers rollback; result-write ambiguity and rollback unlink race remain."},
+    {"id":"F-002","severity":"high","status":"open","summary":"Pre-state and rollback authority remain pathname-based and lack descriptor identity, process start/boot/cgroup, and socket inode binding."},
+    {"id":"F-003","severity":"high","status":"partial_open","summary":"Basic singular/local/CUDA/model/smoke checks exist, but identity is PID/basename based and sustained L3 benchmark plus independent production proof are absent."},
+    {"id":"F-004","severity":"critical","status":"open","summary":"Installer reopens verified pathnames and can leave library/sbin artifacts published after later state/key/policy failure."},
+    {"id":"F-005","severity":"critical","status":"open","summary":"No external authenticated tip or framed EOF contract; deletion of a complete final record is accepted as a valid prefix."},
+    {"id":"K-001","severity":"critical","status":"open","summary":"Task/run can become terminal after the sole freshness check and mutation still executes."},
+    {"id":"K-002","severity":"high","status":"open","summary":"Mutable pathname-based DB/request/queue authority is not descriptor anchored or owner/mode/inode sealed."},
+    {"id":"K-003","severity":"high","status":"open","summary":"Rollback symlink check and unlink are separate pathname operations."},
+    {"id":"K-004","severity":"high","status":"partial_open","summary":"Prompt requires full hash but omits task/run and explicit operator identity; request read is TOCTOU-prone and operator assertion depends on PKEXEC_UID."},
+    {"id":"K-005","severity":"medium","status":"partial_open","summary":"Fixed commands reduce leakage, but persisted stdout/stderr/exception fields lack explicit allowlist/redaction and full secret-canary coverage."},
+    {"id":"K-006","severity":"medium","status":"open","summary":"Duplicate approvals cause durable ambiguity; ledger/model traversal is unbounded; any allowed executor can spend the sole queue."},
+    {"id":"K-007","severity":"high","status":"open","summary":"Uninstall leaves broker-created Ollama drop-in and possible switched service effect in place."},
+    {"id":"K-008","severity":"medium","status":"open","summary":"Hard-coded UID, host, paths, GPU and policy assumptions lack sealed install-time proof."}
+  ],
+  "deterministic_probes": [
+    {"name":"complete_tail_truncation_is_not_detected","result":"exploit_witness_passed"},
+    {"name":"precheck_failure_still_spends_authority_and_calls_rollback","result":"state_machine_witness_passed"},
+    {"name":"task_can_finish_after_precheck_and_mutation_still_runs","result":"authority_race_witness_passed"},
+    {"name":"result_append_crash_leaves_only_consume_without_phase_evidence","result":"crash_ambiguity_witness_passed"}
+  ],
+  "tests": {
+    "review_probes": "4 passed",
+    "pytest_full": "57 passed",
+    "unittest_discovery": "50 passed",
+    "py_compile": "pass",
+    "shell_syntax": "pass",
+    "sudoers_syntax": "pass",
+    "git_diff_check": "pass",
+    "static_scan": "pass",
+    "shellcheck": "unavailable"
+  },
+  "constraints": {
+    "sudo_used": false,
+    "pkexec_used": false,
+    "install_performed": false,
+    "approval_created": false,
+    "service_or_ollama_mutated": false,
+    "bootstrap_performed": false
+  },
+  "required_p0": [
+    "descriptor-anchored authority, queue, pre-state, package and rollback paths",
+    "freshness rechecks before consume, mutation and commit",
+    "durable phase journal plus fixed inspect/reconcile",
+    "external authenticated ledger tip with bounded framing and independent key boundary",
+    "atomic installer publication with complete cleanup and kill-phase fixtures",
+    "L3 process/socket/CUDA/sustained benchmark proof",
+    "safe uninstall/recovery semantics"
+  ],
+  "artifacts": [
+    "privileged_broker/rereview-report-t_63866ca7.md",
+    "privileged_broker/rereview-findings-t_63866ca7.json",
+    "privileged_broker/test_rereview_t_63866ca7.py"
+  ]
+}

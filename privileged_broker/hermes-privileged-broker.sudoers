@@ -1,0 +1,2 @@
+# Fixed no-argument execution only. Approval is NOT NOPASSWD and uses pkexec authentication.
+kvn ALL=(root) NOPASSWD: /usr/local/sbin/hermes-privileged-broker execute

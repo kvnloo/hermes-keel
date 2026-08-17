@@ -1,0 +1,74 @@
+{
+  "schema": "keel.privileged-broker-third-review.v1",
+  "task": "t_b3b69de5",
+  "verdict": "changes_required",
+  "bootstrap_suitable": false,
+  "captain_ceremony_suitable": false,
+  "approval_claim": false,
+  "privileged_actions_performed": false,
+  "blocking_findings": [
+    {
+      "id": "TR-001",
+      "severity": "p0",
+      "class": "authority_race",
+      "summary": "Task/run can become terminal after the last freshness check and mutation_started append; mutation still executes.",
+      "probe": "test_terminal_race_after_mutation_started_record_still_mutates"
+    },
+    {
+      "id": "TR-002",
+      "severity": "p0",
+      "class": "crash_reconciliation",
+      "summary": "Health or committed ledger append followed by checkpoint failure strands a stale checkpoint; rollback/recovery append rejects the state and execution escapes unreconciled.",
+      "probes": [
+        "test_health_checkpoint_crash_escapes_without_rollback_or_reconciliation",
+        "test_committed_checkpoint_crash_cannot_write_recovery_record"
+      ]
+    }
+  ],
+  "required_checks": {
+    "valid_tail_truncation_detected": "pass",
+    "preflight_failure_non_spending_no_rollback": "pass",
+    "terminal_task_run_race_prevents_mutation": "fail",
+    "post_health_result_crashes_reconcile": "fail",
+    "descriptor_package_rollback_uninstall": "partial_gated"
+  },
+  "finding_status": {
+    "F-001": "open_p0",
+    "F-002": "partial_gated",
+    "F-003": "partial_gated",
+    "F-004": "open_p0",
+    "F-005": "partial_open",
+    "K-001": "open_p0",
+    "K-002": "open_gated",
+    "K-003": "closed_tested",
+    "K-004": "closed_tested",
+    "K-005": "partial_gated",
+    "K-006": "open_gated",
+    "K-007": "partial_gated",
+    "K-008": "open_gated"
+  },
+  "tests": {
+    "unchanged_four_probes": "4 passed",
+    "third_review_p0_probes": "3 passed as defect witnesses",
+    "full_pytest_before_new_probes": "57 passed",
+    "unittest_before_new_probes": "50 passed",
+    "py_compile": "pass",
+    "shell_syntax": "pass",
+    "sudoers_syntax": "pass",
+    "diff_check": "pass",
+    "shellcheck": "unavailable"
+  },
+  "constraints": {
+    "sudo_used": false,
+    "pkexec_used": false,
+    "install_performed": false,
+    "approval_created": false,
+    "service_or_ollama_mutated": false,
+    "ceremony_executed": false
+  },
+  "artifacts": [
+    "privileged_broker/third-review-report-t_b3b69de5.md",
+    "privileged_broker/third-review-verdict-t_b3b69de5.json",
+    "privileged_broker/test_third_review_t_b3b69de5.py"
+  ]
+}
