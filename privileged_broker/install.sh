@@ -61,12 +61,30 @@ phase() {
   /usr/bin/python3 -c 'import os,sys; f=os.open(sys.argv[1],os.O_RDONLY); os.fsync(f); os.close(f)' "$PHASE_MANIFEST"
   [ "${KEEL_FAIL_AFTER:-}" != "$1" ] || { printf '%s\n' "injected failure after $1" >&2; exit 97; }
 }
+verify_parent() {
+  parent=$1
+  allow_sticky=${2:-0}
+  [ -d "$parent" ] && [ ! -L "$parent" ] || { printf '%s\n' "unsafe or missing install parent: $parent" >&2; exit 1; }
+  [ "$(/usr/bin/stat -c %u "$parent")" = "$TRUST_UID" ] || { printf '%s\n' "untrusted install parent owner: $parent" >&2; exit 1; }
+  parent_mode=$(/usr/bin/stat -c %a "$parent"); parent_mode=$((0$parent_mode))
+  if [ $((parent_mode & 0022)) != 0 ]; then
+    [ "$allow_sticky" = 1 ] && [ $((parent_mode & 01000)) != 0 ] || {
+      printf '%s\n' "writable install parent: $parent" >&2; exit 1;
+    }
+  fi
+}
 # All destination collisions and filesystem assumptions are rejected before publication.
 [ ! -e "$LIB" ] && [ ! -L "$LIB" ] || { printf '%s\n' 'installed library already exists; uninstall first' >&2; exit 1; }
 [ ! -e "$SBIN" ] && [ ! -L "$SBIN" ] || exit 1
 [ ! -e "$POLICY" ] && [ ! -L "$POLICY" ] || exit 1
 [ ! -e "$STATE" ] && [ ! -L "$STATE" ] || { printf '%s\n' 'state already exists; recovery/uninstall required' >&2; exit 1; }
-/usr/bin/install -d -m 0700 "$(/usr/bin/dirname "$PHASE_MANIFEST")" "$ROOT/usr/local/lib" "$ROOT/usr/local/sbin" "$ROOT/etc/sudoers.d" "$ROOT/var/lib"
+# Shared ancestors are authority boundaries, never installer-owned objects.
+# They must already exist and their modes are inspected, not repaired.
+verify_parent "$ROOT/usr/local/lib"
+verify_parent "$ROOT/usr/local/sbin"
+verify_parent "$ROOT/etc/sudoers.d"
+verify_parent "$ROOT/var/lib"
+verify_parent "$(/usr/bin/dirname "$PHASE_MANIFEST")" 1
 /usr/bin/install -d -o "$TRUST_UID" -m 0700 "$STAGE"
 /usr/bin/install -o "$TRUST_UID" -m 0755 "$PACKAGE/core.py" "$PACKAGE/broker.py" "$PACKAGE/package_v2.py" "$STAGE/"
 /usr/bin/install -d -o "$TRUST_UID" -m 0755 "$STAGE/runtimes/sha256-d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4"

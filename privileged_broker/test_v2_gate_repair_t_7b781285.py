@@ -84,21 +84,63 @@ class V2GateRepairTests(unittest.TestCase):
             installer = package / "install.sh"
             for phase in ("library", "launcher", "state", "key", "policy"):
                 fixture = trust / ("fixture-" + phase)
+                shared = {"usr/local/lib": 0o755, "usr/local/sbin": 0o711,
+                          "etc/sudoers.d": 0o750, "var/lib": 0o755, "var/tmp": 0o1777}
+                for rel, mode in shared.items():
+                    parent = fixture / rel
+                    parent.mkdir(parents=True, exist_ok=True)
+                    parent.chmod(mode)
+                before = {rel: (fixture / rel).stat().st_mode & 0o7777 for rel in shared}
                 env = {**os.environ, "KEEL_ROOTLESS_FIXTURE": "1", "KEEL_INSTALL_ROOT": str(fixture),
                        "KEEL_TRUST_ROOT": str(trust), "KEEL_TRUST_UID": str(os.getuid()),
                        "KEEL_FAIL_AFTER": phase}
                 cp = subprocess.run(["/bin/sh", str(installer), str(package), evidence["manifest_sha256"]],
                                     env=env, capture_output=True, text=True)
                 self.assertEqual(cp.returncode, 97, cp.stderr)
+                self.assertEqual(before, {rel: (fixture / rel).stat().st_mode & 0o7777 for rel in shared})
                 for rel in ("usr/local/lib/hermes-privileged-broker", "usr/local/sbin/hermes-privileged-broker",
                             "etc/sudoers.d/hermes-privileged-broker", "var/lib/hermes-privileged-broker"):
                     self.assertFalse((fixture / rel).exists(), (phase, rel))
+            fixture = trust / "fixture-success"
+            for rel, mode in shared.items():
+                parent = fixture / rel
+                parent.mkdir(parents=True, exist_ok=True)
+                parent.chmod(mode)
+            before = {rel: (fixture / rel).stat().st_mode & 0o7777 for rel in shared}
+            cp = subprocess.run(["/bin/sh", str(installer), str(package), evidence["manifest_sha256"]],
+                                env={**os.environ, "KEEL_ROOTLESS_FIXTURE": "1",
+                                     "KEEL_INSTALL_ROOT": str(fixture),
+                                     "KEEL_TRUST_ROOT": str(trust),
+                                     "KEEL_TRUST_UID": str(os.getuid())},
+                                capture_output=True, text=True)
+            self.assertEqual(cp.returncode, 0, cp.stderr)
+            self.assertEqual(before, {rel: (fixture / rel).stat().st_mode & 0o7777 for rel in shared})
             trust.chmod(0o722)
             cp = subprocess.run(["/bin/sh", str(installer), str(package), evidence["manifest_sha256"]],
                                 env={**os.environ, "KEEL_ROOTLESS_FIXTURE": "1", "KEEL_INSTALL_ROOT": str(trust / "bad"),
                                      "KEEL_TRUST_ROOT": str(trust), "KEEL_TRUST_UID": str(os.getuid())},
                                 capture_output=True, text=True)
             self.assertNotEqual(cp.returncode, 0); self.assertIn("writable package ancestor", cp.stderr)
+
+    def test_symlink_and_preopen_replacement_never_reach_mutation(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td); db_path, req = self._bound(root)
+            key = b"R" * 32; approvals = root / "approvals"
+            core.approve(req, db=db_path, key=key, approvals=approvals,
+                         captain_uid=os.getuid(), now=NOW)
+            original = root / "original.db"
+            db_path.rename(original)
+            db_path.write_bytes(original.read_bytes())
+            backend = Backend()
+            with self.assertRaisesRegex(core.Rejected, "authoritative-board-drift"):
+                core.execute(req, db=db_path, key=key, approvals=approvals,
+                             ledger=root / "ledger", lock=root / "lock", now=NOW, backend=backend)
+            self.assertEqual(backend.calls, ["pre"])
+            db_path.unlink(); db_path.symlink_to(original)
+            with self.assertRaisesRegex(core.Rejected, "unsafe-board"):
+                core.execute(req, db=db_path, key=key, approvals=approvals,
+                             ledger=root / "ledger2", lock=root / "lock2", now=NOW, backend=backend)
+            self.assertEqual(backend.calls, ["pre", "pre"])
 
 
 if __name__ == "__main__": unittest.main()

@@ -80,24 +80,33 @@ def file_hash(path: Path, allowed_uids: tuple[int, ...] = (0,)) -> str:
 
 
 def file_identity(path: Path, allowed_uids: tuple[int, ...] = (0,)) -> dict[str, Any]:
-    fd, st = _safe_regular(path, allowed_uids)
+    fd, _ = _safe_regular(path, allowed_uids)
     try:
-        sha256 = hash_fd = hashlib.sha256()
-        while chunk := os.read(fd, 1024 * 1024):
-            hash_fd.update(chunk)
-    finally:
-        os.close(fd)
-    identity = {"path": str(path.resolve(strict=True)), "uid": st.st_uid, "gid": st.st_gid,
-            "mode": stat.S_IMODE(st.st_mode), "device": st.st_dev, "inode": st.st_ino,
-            "sha256": sha256.hexdigest()}
-    try:
-        db = sqlite3.connect(f"file:{identity['path']}?mode=ro", uri=True)
-        rows = db.execute("select type,name,tbl_name,sql from sqlite_master order by type,name").fetchall()
-        db.close()
-        identity["schema_sha256"] = digest(rows)
+        db = sqlite3.connect(f"file:/proc/self/fd/{fd}?mode=ro", uri=True)
+        try:
+            return _identity_from_fd(fd, db)
+        finally:
+            db.close()
     except sqlite3.Error as exc:
         raise Rejected("invalid-board-schema") from exc
-    return identity
+    finally:
+        os.close(fd)
+
+
+def _identity_from_fd(fd: int, db: sqlite3.Connection) -> dict[str, Any]:
+    """Measure file and schema through the descriptor backing ``db``."""
+    st = os.fstat(fd)
+    h = hashlib.sha256()
+    os.lseek(fd, 0, os.SEEK_SET)
+    while chunk := os.read(fd, 1024 * 1024):
+        h.update(chunk)
+    rows = db.execute("select type,name,tbl_name,sql from sqlite_master order by type,name").fetchall()
+    opened_path = os.readlink(f"/proc/self/fd/{fd}")
+    if opened_path.endswith(" (deleted)"):
+        opened_path = opened_path[:-10]
+    return {"path": opened_path, "uid": st.st_uid, "gid": st.st_gid,
+            "mode": stat.S_IMODE(st.st_mode), "device": st.st_dev, "inode": st.st_ino,
+            "sha256": h.hexdigest(), "schema_sha256": digest(rows)}
 
 
 def canonical_pre_state(runtime: dict[str, Any], board_path: Path,
@@ -214,35 +223,62 @@ def validate_request(req: Any, *, now: int | None = None) -> None:
         raise Rejected("expired")
 
 
+def _open_bound_board(db_path: Path, req: dict[str, Any], request_hash: str, *,
+                      writable: bool) -> tuple[sqlite3.Connection, dict[str, Any]]:
+    """Open once without following symlinks, then verify/query that connection."""
+    flags = (os.O_RDWR if writable else os.O_RDONLY) | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        fd = os.open(db_path, flags)
+    except OSError as exc:
+        raise Rejected("unsafe-board") from exc
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_uid not in (0, os.getuid()):
+            raise Rejected("unsafe-board")
+        mode = "rw" if writable else "ro"
+        db = sqlite3.connect(f"file:/proc/self/fd/{fd}?mode={mode}", uri=True,
+                             timeout=0, isolation_level=None)
+        try:
+            actual = _identity_from_fd(fd, db)
+            expected = req["expected_pre_state"]["board_identity"]
+            if expected["path"] != "/fixture/kanban.db":
+                for key in ("path", "uid", "gid", "mode", "device", "inode", "schema_sha256"):
+                    if actual[key] != expected[key]:
+                        raise Rejected("authoritative-board-drift")
+            if writable:
+                db.execute("pragma busy_timeout=0")
+                db.execute("begin immediate")
+                fenced = _identity_from_fd(fd, db)
+                if any(fenced[key] != actual[key] for key in ("device", "inode", "schema_sha256")):
+                    raise Rejected("authoritative-board-drift")
+                actual = fenced
+            else:
+                db.execute("pragma query_only=on")
+            _task_active_connection(db, req["requester_task"], req["requester_run"], request_hash)
+            return db, actual
+        except Exception:
+            db.close()
+            raise
+    except sqlite3.Error as exc:
+        raise Rejected("canonical-mutation-fence-unavailable" if writable else "unsafe-board") from exc
+    finally:
+        os.close(fd)
+
+
 def task_active(db_path: Path, task: str, run: int, request_hash: str) -> None:
+    """Compatibility query helper; ceremony paths use _open_bound_board."""
     if db_path.is_symlink() or not db_path.is_file():
         raise Rejected("unsafe-board")
     db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    db.execute("pragma query_only=on")
-    row = db.execute("select t.status,t.completed_at,r.status,r.ended_at,t.body from tasks t join task_runs r on r.task_id=t.id where t.id=? and r.id=?", (task, run)).fetchone()
-    comments = db.execute("select body from task_comments where task_id=?", (task,)).fetchall() if row else []
-    db.close()
-    if not row or row[0] != "running" or row[1] is not None or row[2] != "running" or row[3] is not None:
-        raise Rejected("inactive-task-run")
-    if request_hash not in ((row[4] or "") + "\n" + "\n".join(str(x[0] or "") for x in comments)):
-        raise Rejected("request-hash-not-canonical")
+    try:
+        _task_active_connection(db, task, run, request_hash)
+    finally:
+        db.close()
 
 
 def validate_board_authority(db_path: Path, req: dict[str, Any], request_hash: str) -> None:
-    """Re-open and validate the board independently of untrusted packet data."""
-    expected = req["expected_pre_state"]["board_identity"]
-    actual = file_identity(db_path, (0, os.getuid()))
-    for key in ("path", "uid", "gid", "mode", "device", "inode", "schema_sha256"):
-        if actual[key] != expected[key]:
-            raise Rejected("authoritative-board-drift")
-    task_active(db_path, req["requester_task"], req["requester_run"], request_hash)
-
-
-def _validate_bound_board(db_path: Path, req: dict[str, Any], request_hash: str) -> None:
-    if req["expected_pre_state"]["board_identity"]["path"] == "/fixture/kanban.db":
-        task_active(db_path, req["requester_task"], req["requester_run"], request_hash)
-    else:
-        validate_board_authority(db_path, req, request_hash)
+    db, _ = _open_bound_board(db_path, req, request_hash, writable=False)
+    db.close()
 
 
 def _task_active_connection(db: sqlite3.Connection, task: str, run: int,
@@ -269,20 +305,8 @@ def _acquire_mutation_fence(db_path: Path, req: dict[str, Any], request_hash: st
     Kanban database remains the sole authority and a busy/unavailable board is
     rejected rather than polled through the race.
     """
-    if db_path.is_symlink() or not db_path.is_file():
-        raise Rejected("unsafe-board")
-    db = sqlite3.connect(str(db_path), timeout=0, isolation_level=None)
-    try:
-        db.execute("pragma busy_timeout=0")
-        db.execute("begin immediate")
-        _task_active_connection(db, req["requester_task"], req["requester_run"], request_hash)
-        return db, time.monotonic() + lease_seconds
-    except sqlite3.Error as exc:
-        db.close()
-        raise Rejected("canonical-mutation-fence-unavailable") from exc
-    except Exception:
-        db.close()
-        raise
+    db, _ = _open_bound_board(db_path, req, request_hash, writable=True)
+    return db, time.monotonic() + lease_seconds
 
 
 def _validate_mutation_fence(db: sqlite3.Connection, deadline: float,
@@ -324,11 +348,13 @@ def approve(req: dict[str, Any], *, db: Path, key: bytes, approvals: Path, capta
             queue: Path | None = None) -> dict[str, Any]:
     validate_request(req, now=now)
     rh = digest(req)
-    _validate_bound_board(db, req, rh)
+    board_db, board_identity = _open_bound_board(db, req, rh, writable=False)
+    board_db.close()
     body = {"type": "captain-approval", "request_sha256": rh, "operation_id": req["operation_id"],
             "target_host": HOST, "task": req["requester_task"], "run": req["requester_run"],
             "nonce_sha256": hashlib.sha256(req["nonce"].encode()).hexdigest(), "expires_at": req["expires_at"],
-            "captain_uid": captain_uid, "approved_at": now}
+            "captain_uid": captain_uid, "approved_at": now,
+            "board_connection_identity": board_identity}
     rec = {**body, "mac": receipt_mac(key, body)}
     append(approvals, rec)
     if queue is not None:
@@ -514,7 +540,6 @@ def execute(req: dict[str, Any], *, db: Path, key: bytes, approvals: Path, ledge
     fd = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        _validate_bound_board(db, req, rh)
         approvals_found = _records(approvals) if approvals.exists() else []
         valid = []
         for rec in approvals_found:
@@ -535,12 +560,13 @@ def execute(req: dict[str, Any], *, db: Path, key: bytes, approvals: Path, ledge
                       "error": {"type": type(exc).__name__, "message": str(exc)}}
             append_chain(ledger, key, result)
             return result
-        _validate_bound_board(db, req, rh)
-        fence_db, fence_deadline = _acquire_mutation_fence(db, req, rh)
+        fence_db, board_identity = _open_bound_board(db, req, rh, writable=True)
+        fence_deadline = time.monotonic() + 30.0
         mutation_started = False
         try:
             append_chain(ledger, key, _phase(req, "prepared", int(time.time()),
-                                            pre_state_sha256=digest(req["expected_pre_state"])))
+                                            pre_state_sha256=digest(req["expected_pre_state"]),
+                                            board_connection_identity=board_identity))
             _validate_mutation_fence(fence_db, fence_deadline, req, rh)
             append_chain(ledger, key, _phase(req, "consumed", int(time.time()),
                                             approval_sha256=digest(valid[0])))
@@ -597,6 +623,9 @@ def execute(req: dict[str, Any], *, db: Path, key: bytes, approvals: Path, ledge
             return recovery
         return result
     finally:
+        opened_fence = locals().get("fence_db")
+        if opened_fence is not None:
+            opened_fence.close()
         os.close(fd)
 
 
