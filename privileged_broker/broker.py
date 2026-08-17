@@ -8,7 +8,7 @@ from core import OllamaBackend, approve, canonical, digest, execute, file_identi
 STATE=Path('/var/lib/hermes-privileged-broker')
 DB=Path('/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db')
 CAPTAIN_UID=1000
-REQUEST_ROOT=Path('/workspace/zer0/oss/hermes-keel/privileged_broker/requests')
+REQUEST_ROOT=STATE/'requests'
 
 def load(path, allowed_uid=0):
  fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
@@ -26,7 +26,7 @@ def load(path, allowed_uid=0):
 def load_captain_request(path):
  candidate=Path(path)
  if candidate.parent.resolve(strict=True)!=REQUEST_ROOT.resolve(strict=True): raise SystemExit('request must be directly under sealed request root')
- return load(candidate,CAPTAIN_UID)
+ return load(candidate,0)
 def key():
  value=load_bytes(STATE/'approval.key')
  if len(value)!=32: raise SystemExit('invalid authority key')

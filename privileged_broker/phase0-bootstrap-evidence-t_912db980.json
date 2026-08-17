@@ -1,0 +1,39 @@
+{
+  "schema": "keel.phase0-bootstrap-evidence.v1",
+  "acceptanceClaim": false,
+  "task": "t_912db980",
+  "run": 186,
+  "review_scope": "readiness_to_issue_phase0_captain_command_only",
+  "package": {
+    "path": "/var/tmp/hermes-keel-phase0-package-t_912db980-r186",
+    "role": "uid-1000 reviewed evidence input; Phase 0 must descriptor-copy and root-seal it before install",
+    "manifest_sha256": "c74d21bd4f3204ae16c9d7c4e53a420ce15e58ef0e16bdeecf45ffd7a6827aec",
+    "runtime_sha256": "d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4"
+  },
+  "phase0": {
+    "entrypoint": "privileged_broker/phase0_bootstrap.py",
+    "production_argv": [],
+    "captain_steps": 2,
+    "step_1_effect": "root-seal reviewed package, atomically install approver, capture root-only pre-state, emit immutable v2 request/hash",
+    "step_2_effect": "separate authenticated approval after full generated hash is displayed",
+    "operator_display": "JSON audit receipt followed by PHASE-1 REQUEST SHA-256: <full digest>",
+    "idempotency": "a matching immutable request+receipt is displayed without recreation; drift rejects",
+    "cleanup": "owned trusted staging and newly installed authority are removed on injected failure",
+    "forbidden_effects": {
+      "sudo_used_during_rehearsal": false,
+      "pkexec_used_during_rehearsal": false,
+      "live_install_performed": false,
+      "ollama_mutated": false,
+      "service_restarted": false,
+      "authorization_consumed": false
+    }
+  },
+  "tests": {
+    "pytest": "80 passed, 6 subtests passed",
+    "unittest": "48 passed",
+    "py_compile": "passed",
+    "shell_syntax": "passed",
+    "git_diff_check": "passed",
+    "actual_script_rootless": "failure cleanup, successful request/receipt, restart idempotency, source tamper and one-step/argument rejection passed"
+  }
+}
