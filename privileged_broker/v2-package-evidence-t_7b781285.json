@@ -1,0 +1,11 @@
+{
+  "acceptanceClaim": false,
+  "action": "ollama-system-runtime-switch-v2",
+  "manifest_sha256": "58b52972ed53692bd00f2b0c025e74fb5b88ec451eae1c4c6385028dde8b6d54",
+  "package": "/var/tmp/hermes-keel-v2-package-t_7b781285-r163",
+  "package_role": "unprivileged staging evidence only; not privileged input",
+  "runtime_bytes": 39138928,
+  "runtime_sha256": "d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4",
+  "schema": "keel.v2-package-evidence.v1",
+  "trusted_copy_required": true
+}

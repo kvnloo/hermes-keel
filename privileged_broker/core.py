@@ -28,6 +28,7 @@ NEW_BINARY = f"/usr/local/lib/hermes-privileged-broker/runtimes/sha256-{NEW_SHA2
 NEW_VERSION = "0.32.14"
 MODEL_STORE = "/mnt/zer0models/zer0-models/ollama"
 MODEL_NAME = "qwen2.5:3b"
+BOARD_DB = Path("/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db")
 DROPIN = "/etc/systemd/system/ollama.service.d/10-hermes-cuda-runtime.conf"
 DROPIN_BYTES = ("[Service]\nExecStart=\nExecStart=" + NEW_BINARY + " serve\n"
                 "Environment=OLLAMA_HOST=127.0.0.1:11434\n"
@@ -39,7 +40,7 @@ PRE_STATE_KEYS = {"service", "active", "fragment", "fragment_sha256", "dropins",
                   "environment", "main_pid", "process_executable", "process_sha256", "version",
                   "daemon_pids", "listeners", "model_store", "model_store_manifest_sha256",
                   "board_identity"}
-IDENTITY_KEYS = {"path", "uid", "gid", "mode", "device", "inode", "sha256"}
+IDENTITY_KEYS = {"path", "uid", "gid", "mode", "device", "inode", "sha256", "schema_sha256"}
 MAX_LEDGER_BYTES = 8 * 1024 * 1024
 MAX_RECORD_BYTES = 256 * 1024
 PHASES = {"prepared", "consumed", "mutation_started", "health_passed", "committed",
@@ -86,9 +87,26 @@ def file_identity(path: Path, allowed_uids: tuple[int, ...] = (0,)) -> dict[str,
             hash_fd.update(chunk)
     finally:
         os.close(fd)
-    return {"path": str(path.resolve(strict=True)), "uid": st.st_uid, "gid": st.st_gid,
+    identity = {"path": str(path.resolve(strict=True)), "uid": st.st_uid, "gid": st.st_gid,
             "mode": stat.S_IMODE(st.st_mode), "device": st.st_dev, "inode": st.st_ino,
             "sha256": sha256.hexdigest()}
+    try:
+        db = sqlite3.connect(f"file:{identity['path']}?mode=ro", uri=True)
+        rows = db.execute("select type,name,tbl_name,sql from sqlite_master order by type,name").fetchall()
+        db.close()
+        identity["schema_sha256"] = digest(rows)
+    except sqlite3.Error as exc:
+        raise Rejected("invalid-board-schema") from exc
+    return identity
+
+
+def canonical_pre_state(runtime: dict[str, Any], board_path: Path,
+                        allowed_uids: tuple[int, ...] = (0,)) -> dict[str, Any]:
+    state = dict(runtime)
+    state["board_identity"] = file_identity(board_path, allowed_uids)
+    if set(state) != PRE_STATE_KEYS:
+        raise Rejected("bad-canonical-pre-state")
+    return state
 
 
 def tree_manifest_hash(root: Path) -> str:
@@ -132,7 +150,8 @@ def fixture_pre_state() -> dict[str, Any]:
             "listeners": [{"address": "127.0.0.1", "port": PORT, "pid": 4242}],
             "model_store": MODEL_STORE, "model_store_manifest_sha256": "1" * 64,
             "board_identity": {"path": "/fixture/kanban.db", "uid": 0, "gid": 0,
-                               "mode": 0o600, "device": 1, "inode": 1, "sha256": "3" * 64}}
+                               "mode": 0o600, "device": 1, "inode": 1, "sha256": "3" * 64,
+                               "schema_sha256": "4" * 64}}
 
 
 def sealed_package(path: str, manifest_sha256: str) -> dict[str, Any]:
@@ -182,7 +201,8 @@ def validate_request(req: Any, *, now: int | None = None) -> None:
     if (not isinstance(board, dict) or set(board) != IDENTITY_KEYS or
             board["path"] == "" or not str(board["path"]).startswith("/") or
             any(type(board[x]) is not int or board[x] < 0 for x in ("uid", "gid", "mode", "device", "inode")) or
-            not isinstance(board["sha256"], str) or len(board["sha256"]) != 64):
+            any(not isinstance(board[x], str) or len(board[x]) != 64
+                for x in ("sha256", "schema_sha256"))):
         raise Rejected("bad-board-identity")
     if type(req["requester_run"]) is not int or not str(req["requester_task"]).startswith("t_"):
         raise Rejected("bad-task-run")
@@ -206,6 +226,23 @@ def task_active(db_path: Path, task: str, run: int, request_hash: str) -> None:
         raise Rejected("inactive-task-run")
     if request_hash not in ((row[4] or "") + "\n" + "\n".join(str(x[0] or "") for x in comments)):
         raise Rejected("request-hash-not-canonical")
+
+
+def validate_board_authority(db_path: Path, req: dict[str, Any], request_hash: str) -> None:
+    """Re-open and validate the board independently of untrusted packet data."""
+    expected = req["expected_pre_state"]["board_identity"]
+    actual = file_identity(db_path, (0, os.getuid()))
+    for key in ("path", "uid", "gid", "mode", "device", "inode", "schema_sha256"):
+        if actual[key] != expected[key]:
+            raise Rejected("authoritative-board-drift")
+    task_active(db_path, req["requester_task"], req["requester_run"], request_hash)
+
+
+def _validate_bound_board(db_path: Path, req: dict[str, Any], request_hash: str) -> None:
+    if req["expected_pre_state"]["board_identity"]["path"] == "/fixture/kanban.db":
+        task_active(db_path, req["requester_task"], req["requester_run"], request_hash)
+    else:
+        validate_board_authority(db_path, req, request_hash)
 
 
 def _task_active_connection(db: sqlite3.Connection, task: str, run: int,
@@ -287,7 +324,7 @@ def approve(req: dict[str, Any], *, db: Path, key: bytes, approvals: Path, capta
             queue: Path | None = None) -> dict[str, Any]:
     validate_request(req, now=now)
     rh = digest(req)
-    task_active(db, req["requester_task"], req["requester_run"], rh)
+    _validate_bound_board(db, req, rh)
     body = {"type": "captain-approval", "request_sha256": rh, "operation_id": req["operation_id"],
             "target_host": HOST, "task": req["requester_task"], "run": req["requester_run"],
             "nonce_sha256": hashlib.sha256(req["nonce"].encode()).hexdigest(), "expires_at": req["expires_at"],
@@ -477,7 +514,7 @@ def execute(req: dict[str, Any], *, db: Path, key: bytes, approvals: Path, ledge
     fd = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        task_active(db, req["requester_task"], req["requester_run"], rh)
+        _validate_bound_board(db, req, rh)
         approvals_found = _records(approvals) if approvals.exists() else []
         valid = []
         for rec in approvals_found:
@@ -498,7 +535,7 @@ def execute(req: dict[str, Any], *, db: Path, key: bytes, approvals: Path, ledge
                       "error": {"type": type(exc).__name__, "message": str(exc)}}
             append_chain(ledger, key, result)
             return result
-        task_active(db, req["requester_task"], req["requester_run"], rh)
+        _validate_bound_board(db, req, rh)
         fence_db, fence_deadline = _acquire_mutation_fence(db, req, rh)
         mutation_started = False
         try:
@@ -596,7 +633,8 @@ class OllamaBackend:
             rows.append({"address": address, "port": int(port), "pid": pid})
         return sorted(rows, key=lambda x: (x["address"], x["pid"]))
 
-    def capture_pre_state(self) -> dict[str, Any]:
+    def capture_pre_state(self, board_path: Path | None = None,
+                          board_uids: tuple[int, ...] = (0,)) -> dict[str, Any]:
         fragment = Path(self._show("FragmentPath")).resolve(strict=True)
         dropin_paths = [Path(x).resolve(strict=True) for x in self._show("DropInPaths").split() if x]
         pid_text = self._show("MainPID")
@@ -621,7 +659,7 @@ class OllamaBackend:
                 continue
             if candidate.name == "ollama":
                 daemon_pids.append(int(entry.name))
-        return {"service": SERVICE, "active": self._show("ActiveState") == "active",
+        runtime = {"service": SERVICE, "active": self._show("ActiveState") == "active",
                 "fragment": str(fragment), "fragment_sha256": file_hash(fragment),
                 "dropins": [{"path": str(p), "sha256": file_hash(p)} for p in dropin_paths],
                 "exec_start": self._show("ExecStart").split(), "environment": env, "main_pid": pid,
@@ -629,6 +667,10 @@ class OllamaBackend:
                 "version": version, "daemon_pids": sorted(daemon_pids),
                 "listeners": self._listeners(), "model_store": MODEL_STORE,
                 "model_store_manifest_sha256": tree_manifest_hash(Path(MODEL_STORE))}
+        if board_path is None:
+            board_path = BOARD_DB
+            board_uids = (0, 1000)
+        return canonical_pre_state(runtime, board_path, board_uids)
 
     def check_pre(self, req: dict[str, Any]) -> None:
         if socket.gethostname() != HOST or file_hash(Path(NEW_BINARY)) != NEW_SHA256:

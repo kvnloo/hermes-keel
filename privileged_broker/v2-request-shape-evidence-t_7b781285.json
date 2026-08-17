@@ -1,0 +1,7 @@
+{
+  "board_identity_keys": ["device", "gid", "inode", "mode", "path", "schema_sha256", "sha256", "uid"],
+  "comparison": "Canonical exact pre-state comparison plus independent approve/execute DB reopen and path/device/inode/schema/task/run/request-hash/fence binding.",
+  "live_capture": "OllamaBackend.capture_pre_state receives the authoritative board descriptor and calls the sole canonical_pre_state serializer.",
+  "pre_state_keys": ["active", "board_identity", "daemon_pids", "dropins", "environment", "exec_start", "fragment", "fragment_sha256", "listeners", "main_pid", "model_store", "model_store_manifest_sha256", "process_executable", "process_sha256", "service", "version"],
+  "schema": "keel.v2-request-shape-evidence.v1"
+}

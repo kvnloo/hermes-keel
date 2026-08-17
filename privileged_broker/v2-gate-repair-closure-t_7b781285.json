@@ -1,0 +1,27 @@
+{
+  "acceptanceClaim": false,
+  "files": {
+    "privileged_broker/README.md": "a843497b9c5368db9255628f9d8c05aa8accc270fe119229a990a8b63690d62f",
+    "privileged_broker/broker.py": "03bb080c324070e5c1bda87ccd175be1c3a1534c3c7b4a144a56347c9d96740d",
+    "privileged_broker/core.py": "9513a662e9b17b86f54dd3ab48a2360d7e7ce14d3831f1a63787869a563d3572",
+    "privileged_broker/install.sh": "0cc31f19bac6704bc1429bc074adce5bf489a3929d02d15bd5e33a1132aca297",
+    "privileged_broker/test_v2_gate_repair_t_7b781285.py": "deb6a3256d842d55cd2e6c113ad70753867ad8655f75fb351a0e0e8c6ca36b86",
+    "privileged_broker/v2-package-evidence-t_7b781285.json": "48cbf38e85eddd69777bc2de40a699d9ddbd7b46871323a5c4dbef0db348008a"
+  },
+  "findings": {
+    "V2-R1": "closed_tested",
+    "V2-R2": "closed_tested",
+    "V2-R3": "closed_actual_installer_fixture",
+    "V2-R4": "closed_tested"
+  },
+  "privileged_action": false,
+  "schema": "keel.v2-gate-repair-closure.v1",
+  "task": "t_7b781285",
+  "verification": {
+    "diff_check": "pass",
+    "py_compile": "pass",
+    "pytest": "76 passed, 3 subtests passed",
+    "shell_syntax": "pass",
+    "unittest": "44 passed"
+  }
+}

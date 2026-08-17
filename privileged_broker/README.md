@@ -17,10 +17,13 @@ The HMAC key only protects root-owned receipt integrity; it does not replace Cap
 Never run the installer from this mutable checkout. First run unprivileged
 `./build-package.sh /var/tmp/hermes-broker-package-UNIQUE /absolute/reviewed/ollama`, inspect every byte, and
 record the printed `MANIFEST` SHA-256. The package contains the installer itself.
-During a future specifically approved ceremony, transfer that exact package to
-root ownership without following links (`sudo chown -hR root:root ABSOLUTE_PACKAGE`),
-then run `sudo /bin/sh ABSOLUTE_PACKAGE/install.sh ABSOLUTE_PACKAGE FULL_MANIFEST_SHA256`.
-The package must be under a non-user-renamable parent after ownership transfer.
+During a future specifically approved ceremony, root must create a private
+staging root (mode 0700), copy the reviewed package into it without following
+links, seal every copied member root-owned/read-only, and reverify the full
+manifest hash there. Only then run the copied installer. A package beneath
+`/var/tmp` is evidence input only; leaf `chown` is deliberately insufficient.
+The installer descriptor-checks every ancestor through the trusted staging root
+and rejects symlinks, non-root owners, and group/world-writable directories.
 
 The v2 package contains the exact reviewed runtime as `runtime/ollama`. Installation
 publishes it at the content-addressed root-owned path encoded by `fixed_operation`;

@@ -46,7 +46,7 @@ def main():
  args=p.parse_args()
  if args.cmd=='create-request':
   # Seal the complete live effective unit/process/listener/model-store state into the request.
-  pre_state=OllamaBackend().capture_pre_state(); pre_state['board_identity']=file_identity(DB,(CAPTAIN_UID,))
+  pre_state=OllamaBackend().capture_pre_state(DB,(CAPTAIN_UID,))
   req=make_request(args.task,args.run,secrets.token_urlsafe(32),int(time.time()),pre_state=pre_state,package=sealed_package(str(Path(args.package).resolve(strict=True)),args.manifest_sha256)); Path(args.output).write_bytes(canonical(req)+b'\n'); print(digest(req)); return
  if os.geteuid()!=0: raise SystemExit('approve/execute must run through installed pkexec/sudo policy')
  if args.cmd=='approve':
