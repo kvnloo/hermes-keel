@@ -6,8 +6,10 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from privileged_broker import core
+from privileged_broker import phase0_bootstrap
 
 SCRIPT = Path(__file__).with_name("phase0_bootstrap.py")
 SOURCE = Path("/var/tmp/hermes-keel-phase0-package-t_912db980-r186")
@@ -34,14 +36,14 @@ class Phase0ActualScriptTests(unittest.TestCase):
 
     def tearDown(self): self.temp.cleanup()
 
-    def invoke(self, fail=None, extra=None):
+    def invoke(self, fail=None, extra=None, argv=()):
         env={**os.environ,"KEEL_PHASE0_ROOTLESS_FIXTURE":"1","KEEL_PHASE0_SOURCE":str(self.source),
              "KEEL_PHASE0_TRUSTED_ROOT":str(self.trusted),"KEEL_PHASE0_INSTALL_ROOT":str(self.root),
              "KEEL_PHASE0_BOARD":str(self.board),"KEEL_PHASE0_PRESTATE":str(self.pre),
              "KEEL_PHASE0_TASK":"t_phase0","KEEL_PHASE0_RUN":"912"}
         if fail: env["KEEL_PHASE0_FAIL_AFTER"]=fail
         if extra: env.update(extra)
-        return subprocess.run([sys.executable,str(SCRIPT)],env=env,capture_output=True,text=True)
+        return subprocess.run([sys.executable,str(SCRIPT),*argv],env=env,capture_output=True,text=True)
 
     def assert_clean(self):
         for rel in ("usr/local/lib/hermes-privileged-broker","usr/local/sbin/hermes-privileged-broker",
@@ -74,7 +76,28 @@ class Phase0ActualScriptTests(unittest.TestCase):
         self.assertNotIn("systemctl",text); self.assertNotIn(" approve(",text); self.assertNotIn("execute(",text)
         self.assertNotIn("runtime-switch-v1",text)
         cp=subprocess.run([sys.executable,str(SCRIPT),"one-step"],capture_output=True,text=True)
-        self.assertNotEqual(cp.returncode,0); self.assertIn("root-required",cp.stderr)
+        self.assertNotEqual(cp.returncode,0); self.assertIn("phase0-accepts-no-arguments",cp.stderr)
+
+    def test_fixed_argv_rejects_before_fixture_or_production_selection(self):
+        for fixture_value in ("1", "0", "", "unexpected"):
+            for argv in (("positional",), ("--flag",), ("--flag=value", "extra")):
+                with self.subTest(fixture=fixture_value, argv=argv):
+                    cp = self.invoke(extra={"KEEL_PHASE0_ROOTLESS_FIXTURE": fixture_value}, argv=argv)
+                    self.assertNotEqual(cp.returncode, 0)
+                    self.assertEqual(cp.stdout, "")
+                    self.assertIn("phase0-accepts-no-arguments", cp.stderr)
+                    self.assert_clean()
+
+        # Shape the production branch as root without requiring privilege.  A
+        # hostile argv must be rejected before root/configuration or sealing.
+        with (mock.patch.object(sys, "argv", [str(SCRIPT), "--hostile"]),
+              mock.patch.object(phase0_bootstrap.os, "geteuid", return_value=0),
+              mock.patch.object(phase0_bootstrap, "_seal") as seal):
+            with self.assertRaisesRegex(phase0_bootstrap.Rejected,
+                                        "phase0-accepts-no-arguments"):
+                phase0_bootstrap._configuration()
+            seal.assert_not_called()
+        self.assert_clean()
 
 
 if __name__ == "__main__": unittest.main()

@@ -41,11 +41,14 @@ def _fixture() -> bool:
     return os.environ.get("KEEL_PHASE0_ROOTLESS_FIXTURE") == "1" and os.geteuid() != 0
 
 def _configuration():
+    # Phase-0 is a fixed ceremony entrypoint, including in the rootless test
+    # seam.  Reject argv before selecting either configuration branch so an
+    # override can never broaden the production interface.
+    if len(sys.argv) != 1:
+        raise Rejected("phase0-accepts-no-arguments")
     if not _fixture():
         if os.geteuid() != 0:
             raise Rejected("root-required")
-        if len(sys.argv) != 1:
-            raise Rejected("phase0-accepts-no-arguments")
         return SOURCE, TRUSTED_ROOT, INSTALL_ROOT, BOARD, TASK, RUN, CAPTAIN_UID
     # Overrides are a rootless test seam, never a production input surface.
     return (Path(os.environ["KEEL_PHASE0_SOURCE"]), Path(os.environ["KEEL_PHASE0_TRUSTED_ROOT"]),
