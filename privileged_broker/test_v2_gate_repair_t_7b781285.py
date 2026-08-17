@@ -115,6 +115,48 @@ class V2GateRepairTests(unittest.TestCase):
                                 capture_output=True, text=True)
             self.assertEqual(cp.returncode, 0, cp.stderr)
             self.assertEqual(before, {rel: (fixture / rel).stat().st_mode & 0o7777 for rel in shared})
+            # Destination policy covers the complete root-to-parent chain, not
+            # merely the immediate shared parent and not the package source.
+            for unsafe_rel, mode in (("usr", 0o777), ("usr/local", 0o775)):
+                bad = trust / ("bad-" + unsafe_rel.replace("/", "-"))
+                for rel, safe_mode in shared.items():
+                    parent = bad / rel
+                    parent.mkdir(parents=True, exist_ok=True); parent.chmod(safe_mode)
+                (bad / unsafe_rel).chmod(mode)
+                cp = subprocess.run(["/bin/sh", str(installer), str(package), evidence["manifest_sha256"]],
+                                    env={**os.environ, "KEEL_ROOTLESS_FIXTURE": "1",
+                                         "KEEL_INSTALL_ROOT": str(bad), "KEEL_TRUST_ROOT": str(trust),
+                                         "KEEL_TRUST_UID": str(os.getuid())}, capture_output=True, text=True)
+                self.assertNotEqual(cp.returncode, 0); self.assertIn("writable install ancestor", cp.stderr)
+                self.assertFalse((bad / "usr/local/lib/hermes-privileged-broker").exists())
+            bad = trust / "bad-symlink"; outside = trust / "outside"; outside.mkdir()
+            bad.mkdir(); (bad / "usr").symlink_to(outside, target_is_directory=True)
+            cp = subprocess.run(["/bin/sh", str(installer), str(package), evidence["manifest_sha256"]],
+                                env={**os.environ, "KEEL_ROOTLESS_FIXTURE": "1", "KEEL_INSTALL_ROOT": str(bad),
+                                     "KEEL_TRUST_ROOT": str(trust), "KEEL_TRUST_UID": str(os.getuid())},
+                                capture_output=True, text=True)
+            self.assertNotEqual(cp.returncode, 0); self.assertIn("symlink or unsafe install ancestor", cp.stderr)
+            race = trust / "bad-race"
+            for rel, safe_mode in shared.items():
+                parent = race / rel; parent.mkdir(parents=True, exist_ok=True); parent.chmod(safe_mode)
+            cp = subprocess.run(["/bin/sh", str(installer), str(package), evidence["manifest_sha256"]],
+                                env={**os.environ, "KEEL_ROOTLESS_FIXTURE": "1", "KEEL_INSTALL_ROOT": str(race),
+                                     "KEEL_TRUST_ROOT": str(trust), "KEEL_TRUST_UID": str(os.getuid()),
+                                     "KEEL_TEST_BEFORE_WRITE_FENCE": f"chmod 0777 {race / 'usr/local'}"},
+                                capture_output=True, text=True)
+            self.assertNotEqual(cp.returncode, 0); self.assertIn("writable install ancestor", cp.stderr)
+            self.assertFalse((race / "usr/local/lib/hermes-privileged-broker").exists())
+            owner_bad = trust / "bad-owner"
+            for rel, safe_mode in shared.items():
+                parent = owner_bad / rel; parent.mkdir(parents=True, exist_ok=True); parent.chmod(safe_mode)
+            cp = subprocess.run(["/bin/sh", str(installer), str(package), evidence["manifest_sha256"]],
+                                env={**os.environ, "KEEL_ROOTLESS_FIXTURE": "1",
+                                     "KEEL_INSTALL_ROOT": str(owner_bad), "KEEL_TRUST_ROOT": str(trust),
+                                     "KEEL_TRUST_UID": str(os.getuid()),
+                                     "KEEL_TEST_DESTINATION_TRUST_UID": str(os.getuid() + 1)},
+                                capture_output=True, text=True)
+            self.assertNotEqual(cp.returncode, 0); self.assertIn("untrusted install ancestor owner", cp.stderr)
+            self.assertFalse((owner_bad / "usr/local/lib/hermes-privileged-broker").exists())
             trust.chmod(0o722)
             cp = subprocess.run(["/bin/sh", str(installer), str(package), evidence["manifest_sha256"]],
                                 env={**os.environ, "KEEL_ROOTLESS_FIXTURE": "1", "KEEL_INSTALL_ROOT": str(trust / "bad"),
