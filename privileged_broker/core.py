@@ -284,13 +284,41 @@ def validate_board_authority(db_path: Path, req: dict[str, Any], request_hash: s
 def _task_active_connection(db: sqlite3.Connection, task: str, run: int,
                             request_hash: str) -> None:
     """Validate authority inside the transaction that fences canonical writers."""
-    row = db.execute(
-        "select t.status,t.completed_at,r.status,r.ended_at,t.body "
-        "from tasks t join task_runs r on r.task_id=t.id where t.id=? and r.id=?",
-        (task, run),
-    ).fetchone()
+    task_columns = {column[1] for column in db.execute("pragma table_info(tasks)")}
+    run_columns = {column[1] for column in db.execute("pragma table_info(task_runs)")}
+    extended = {"block_kind", "current_run_id"}.issubset(task_columns) and "outcome" in run_columns
+    if extended:
+        row = db.execute(
+            "select t.status,t.completed_at,r.status,r.ended_at,t.body,t.block_kind,"
+            "t.current_run_id,r.outcome from tasks t join task_runs r on r.task_id=t.id "
+            "where t.id=? and r.id=?", (task, run),
+        ).fetchone()
+    else:
+        row = db.execute(
+            "select t.status,t.completed_at,r.status,r.ended_at,t.body "
+            "from tasks t join task_runs r on r.task_id=t.id where t.id=? and r.id=?",
+            (task, run),
+        ).fetchone()
     comments = db.execute("select body from task_comments where task_id=?", (task,)).fetchall() if row else []
-    if not row or row[0] != "running" or row[1] is not None or row[2] != "running" or row[3] is not None:
+    active_origin = row and row[0] == "running" and row[1] is None and row[2] == "running" and row[3] is None
+    # Phase 0 deliberately parks its originating run at a typed human gate. On
+    # continuation the dispatcher starts a successor run, but the immutable
+    # request remains bound to the parked run. Accept that one transition only:
+    # the task must still be nonterminal, block_kind must remain needs_input,
+    # and current_run_id must name a live successor for the same task. A merely
+    # historical blocked run, a ready task, or a later terminal task stays dead.
+    human_gate_continuation = False
+    if row and extended and row[2] == "blocked" and row[3] is not None and row[7] == "blocked":
+        successor = db.execute(
+            "select status,ended_at,outcome from task_runs where id=? and task_id=?",
+            (row[6], task),
+        ).fetchone()
+        human_gate_continuation = (
+            row[0] == "running" and row[1] is None and row[5] == "needs_input" and
+            type(row[6]) is int and row[6] != run and successor is not None and
+            successor[0] == "running" and successor[1] is None and successor[2] is None
+        )
+    if not row or not (active_origin or human_gate_continuation):
         raise Rejected("inactive-task-run")
     if request_hash not in ((row[4] or "") + "\n" + "\n".join(str(x[0] or "") for x in comments)):
         raise Rejected("request-hash-not-canonical")

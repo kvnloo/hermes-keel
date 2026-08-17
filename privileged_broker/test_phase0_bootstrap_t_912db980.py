@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -13,6 +14,7 @@ from privileged_broker import phase0_bootstrap
 
 SCRIPT = Path(__file__).with_name("phase0_bootstrap.py")
 SOURCE = Path("/var/tmp/hermes-keel-phase0-package-t_912db980-r186")
+MANIFEST_SHA256 = "c74d21bd4f3204ae16c9d7c4e53a420ce15e58ef0e16bdeecf45ffd7a6827aec"
 
 
 class Phase0ActualScriptTests(unittest.TestCase):
@@ -31,16 +33,36 @@ class Phase0ActualScriptTests(unittest.TestCase):
             p=self.root/rel; p.mkdir(parents=True,exist_ok=True); p.chmod(mode)
         self.trusted = self.base / "root-private" / "ceremony"
         (self.base / "root-private").mkdir(mode=0o700)
-        self.board = self.base / "board.db"; self.board.write_bytes(b"fixture")
+        self.board = self.base / "board.db"
+        db=sqlite3.connect(self.board)
+        db.executescript("create table tasks(id text,status text,completed_at int,block_kind text,body text,current_run_id int);"
+                         "create table task_runs(id int,task_id text,status text,ended_at int,outcome text);"
+                         "create table task_comments(task_id text,body text);")
+        self.binding = self.base / "binding.json"
+        self.binding_body={"schema":"keel.phase0-binding.v1","task":"t_phase0","run":912,
+              "board":str(self.board),"board_identity":{},"host":"groot","source":str(self.source),
+              "manifest_sha256":MANIFEST_SHA256,"action":"ollama-system-runtime-switch-v2",
+              "nonce":"N"*40,"created_at":__import__('time').time_ns()//1_000_000_000,
+              "expires_at":__import__('time').time_ns()//1_000_000_000+1800}
+        packet_hash=self.write_binding()
+        db.execute("insert into tasks values(?,?,?,?,?,?)",("t_phase0","running",None,None,packet_hash,912))
+        db.execute("insert into task_runs values(?,?,?,?,?)",(912,"t_phase0","running",None,None)); db.commit(); db.close()
         self.pre = self.base / "pre.json"; self.pre.write_text(json.dumps(core.fixture_pre_state()))
 
     def tearDown(self): self.temp.cleanup()
 
+    def write_binding(self, **changes):
+        body={**self.binding_body, **changes}
+        packet_hash=__import__('hashlib').sha256(json.dumps(body,sort_keys=True,separators=(",",":"),ensure_ascii=True).encode()).hexdigest()
+        packet={**body,"packet_sha256":packet_hash}
+        if self.binding.exists(): self.binding.chmod(0o644)
+        self.binding.write_text(json.dumps(packet)); self.binding.chmod(0o444)
+        return packet_hash
+
     def invoke(self, fail=None, extra=None, argv=()):
-        env={**os.environ,"KEEL_PHASE0_ROOTLESS_FIXTURE":"1","KEEL_PHASE0_SOURCE":str(self.source),
+        env={**os.environ,"KEEL_PHASE0_ROOTLESS_FIXTURE":"1","KEEL_PHASE0_BINDING":str(self.binding),
              "KEEL_PHASE0_TRUSTED_ROOT":str(self.trusted),"KEEL_PHASE0_INSTALL_ROOT":str(self.root),
-             "KEEL_PHASE0_BOARD":str(self.board),"KEEL_PHASE0_PRESTATE":str(self.pre),
-             "KEEL_PHASE0_TASK":"t_phase0","KEEL_PHASE0_RUN":"912"}
+             "KEEL_PHASE0_PRESTATE":str(self.pre)}
         if fail: env["KEEL_PHASE0_FAIL_AFTER"]=fail
         if extra: env.update(extra)
         return subprocess.run([sys.executable,str(SCRIPT),*argv],env=env,capture_output=True,text=True)
@@ -73,7 +95,7 @@ class Phase0ActualScriptTests(unittest.TestCase):
         tampered=self.source/"core.py"; tampered.chmod(0o644); tampered.write_text("tamper")
         cp=self.invoke(); self.assertNotEqual(cp.returncode,0); self.assert_clean()
         text=SCRIPT.read_text()
-        self.assertNotIn("systemctl",text); self.assertNotIn(" approve(",text); self.assertNotIn("execute(",text)
+        self.assertNotIn("systemctl",text); self.assertNotIn(" approve(",text); self.assertNotIn("from core import execute",text)
         self.assertNotIn("runtime-switch-v1",text)
         cp=subprocess.run([sys.executable,str(SCRIPT),"one-step"],capture_output=True,text=True)
         self.assertNotEqual(cp.returncode,0); self.assertIn("phase0-accepts-no-arguments",cp.stderr)
@@ -98,6 +120,47 @@ class Phase0ActualScriptTests(unittest.TestCase):
                 phase0_bootstrap._configuration()
             seal.assert_not_called()
         self.assert_clean()
+
+    def test_binding_tamper_expiry_substitution_and_historical_run_reject_clean(self):
+        original=self.binding.read_bytes()
+        cases=(
+            ("hash-tamper", lambda: self.binding.write_bytes(original.replace(b'"host": "groot"',b'"host": "other"'))),
+            ("expired", lambda: self.write_binding(created_at=1,expires_at=2)),
+            ("future", lambda: self.write_binding(created_at=4_000_000_000,expires_at=4_000_000_100)),
+            ("source-substitution", lambda: self.write_binding(source="relative/package")),
+            ("run-substitution", lambda: self.write_binding(run=913)),
+        )
+        for name, mutate in cases:
+            with self.subTest(name=name):
+                self.binding.chmod(0o644); mutate(); self.binding.chmod(0o444)
+                cp=self.invoke(); self.assertNotEqual(cp.returncode,0,cp.stdout+cp.stderr)
+                self.assert_clean()
+                self.binding.chmod(0o644); self.binding.write_bytes(original); self.binding.chmod(0o444)
+
+        real=self.base/"binding-real.json"
+        real.write_bytes(original); self.binding.unlink(); self.binding.symlink_to(real)
+        cp=self.invoke(); self.assertNotEqual(cp.returncode,0); self.assert_clean()
+
+    def test_phase1_accepts_only_live_successor_of_needs_input_gate(self):
+        request_hash="a"*64
+        db=sqlite3.connect(self.board)
+        db.execute("update tasks set status='running',block_kind='needs_input',body=?,current_run_id=913 where id='t_phase0'",(request_hash,))
+        db.execute("update task_runs set status='blocked',ended_at=1,outcome='blocked' where id=912")
+        db.execute("insert into task_runs values(?,?,?,?,?)",(913,"t_phase0","running",None,None)); db.commit()
+        core._task_active_connection(db,"t_phase0",912,request_hash)
+        mutations=(
+            "update tasks set status='ready' where id='t_phase0'",
+            "update tasks set block_kind='capability' where id='t_phase0'",
+            "update task_runs set ended_at=2,outcome='completed',status='done' where id=913",
+        )
+        for mutation in mutations:
+            db.execute(mutation); db.commit()
+            with self.assertRaisesRegex(core.Rejected,"inactive-task-run"):
+                core._task_active_connection(db,"t_phase0",912,request_hash)
+            db.execute("update tasks set status='running',block_kind='needs_input' where id='t_phase0'")
+            db.execute("update task_runs set ended_at=null,outcome=null,status='running' where id=913")
+            db.commit()
+        db.close()
 
 
 if __name__ == "__main__": unittest.main()
