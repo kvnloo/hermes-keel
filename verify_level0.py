@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -81,11 +82,11 @@ def authoritative_files() -> list[Path]:
         kept = []
         for name in names:
             candidate = current / name
+            if stat.S_ISLNK(candidate.lstat().st_mode):
+                fail(f"path alias in authoritative scope: {candidate.relative_to(ROOT).as_posix()}")
             resolved = candidate.resolve()
             if resolved in exclusions:
                 continue
-            if candidate.is_symlink():
-                fail(f"path alias in authoritative scope: {candidate.relative_to(ROOT).as_posix()}")
             kept.append(name)
         names[:] = kept
         for name in filenames:
@@ -151,6 +152,7 @@ def authorized_level0b_paths() -> set[str]:
 
 def main() -> None:
     verify_canonical_scope()
+    files = authoritative_files()
     if not MANIFEST_PATH.is_file() or not REPORT_PATH.is_file() or not NONCE_PATH.is_file():
         fail("evidence packet is incomplete")
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -181,7 +183,7 @@ def main() -> None:
     if not verdicts or set(verdicts.values()) != {"PASS"}:
         fail("one or more forbidden capability categories did not pass")
     occurrences = []
-    for path in authoritative_files():
+    for path in files:
         if not path.is_file():
             continue
         rel = path.relative_to(ROOT).as_posix()

@@ -65,6 +65,56 @@ class VerifyLevel0ScopeTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("path alias in authoritative scope", result.stdout + result.stderr)
 
+    def assert_directory_alias_fails(self, link: Path) -> None:
+        result = self.verify()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            f"path alias in authoritative scope: {link.relative_to(self.repo).as_posix()}",
+            result.stdout + result.stderr,
+        )
+
+    def test_descriptor_known_git_admin_alias_fails_before_exclusion(self) -> None:
+        git_dir = Path(run("git", "rev-parse", "--git-dir", cwd=self.repo).stdout.strip())
+        if not git_dir.is_absolute():
+            git_dir = self.repo / git_dir
+        alias = self.repo / "git-admin-alias"
+        os.symlink(git_dir, alias, target_is_directory=True)
+        self.assert_directory_alias_fails(alias)
+
+    def test_descriptor_known_sibling_alias_fails_before_exclusion(self) -> None:
+        sibling = self.repo / "nested" / "sibling"
+        sibling.parent.mkdir()
+        run("git", "worktree", "add", "--quiet", "--detach", str(sibling), cwd=self.repo)
+        alias = self.repo / "sibling-alias"
+        os.symlink(sibling, alias, target_is_directory=True)
+        self.assert_directory_alias_fails(alias)
+
+    def test_absolute_directory_alias_fails_without_target_read(self) -> None:
+        target = self.temp / "absolute-target"
+        target.mkdir()
+        (target / "nonce.txt").write_bytes((self.repo / NONCE_REL).read_bytes())
+        alias = self.repo / "absolute-alias"
+        os.symlink(target, alias, target_is_directory=True)
+        self.assert_directory_alias_fails(alias)
+
+    def test_relative_directory_alias_fails_without_target_read(self) -> None:
+        target = self.temp / "relative-target"
+        target.mkdir()
+        (target / "nonce.txt").write_bytes((self.repo / NONCE_REL).read_bytes())
+        alias = self.repo / "relative-alias"
+        os.symlink(os.path.relpath(target, self.repo), alias, target_is_directory=True)
+        self.assert_directory_alias_fails(alias)
+
+    def test_broken_directory_alias_fails_without_target_read(self) -> None:
+        alias = self.repo / "broken-alias"
+        os.symlink(self.temp / "missing-target", alias, target_is_directory=True)
+        self.assert_directory_alias_fails(alias)
+
+    def test_loop_directory_alias_fails_without_target_resolution(self) -> None:
+        alias = self.repo / "loop-alias"
+        os.symlink(alias.name, alias, target_is_directory=True)
+        self.assert_directory_alias_fails(alias)
+
     def test_unregistered_nested_checkout_is_not_implicitly_ignored(self) -> None:
         nested = self.repo / "nested-repository"
         nested.mkdir()
