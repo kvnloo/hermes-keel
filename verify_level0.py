@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -50,6 +51,66 @@ def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
 
 
+def git_path(*args: str) -> Path:
+    value = git(*args)
+    path = Path(value)
+    return (ROOT / path).resolve() if not path.is_absolute() else path.resolve()
+
+
+def excluded_git_trees() -> set[Path]:
+    """Return only descriptor-proven Git administrative and sibling trees."""
+    output = subprocess.check_output(
+        ["git", "worktree", "list", "--porcelain", "-z"], cwd=ROOT
+    )
+    worktrees = {
+        Path(field.removeprefix(b"worktree ").decode("utf-8")).resolve()
+        for field in output.split(b"\0")
+        if field.startswith(b"worktree ")
+    }
+    exclusions = {git_path("rev-parse", "--git-dir"), git_path("rev-parse", "--git-common-dir")}
+    exclusions.update(path for path in worktrees if path != ROOT and path.is_relative_to(ROOT))
+    return {path for path in exclusions if path != ROOT and path.is_relative_to(ROOT)}
+
+
+def authoritative_files() -> list[Path]:
+    """Enumerate the canonical checkout without following aliases out of scope."""
+    exclusions = excluded_git_trees()
+    files: list[Path] = []
+    for directory, names, filenames in os.walk(ROOT, topdown=True, followlinks=False):
+        current = Path(directory)
+        kept = []
+        for name in names:
+            candidate = current / name
+            resolved = candidate.resolve()
+            if resolved in exclusions:
+                continue
+            if candidate.is_symlink():
+                fail(f"path alias in authoritative scope: {candidate.relative_to(ROOT).as_posix()}")
+            kept.append(name)
+        names[:] = kept
+        for name in filenames:
+            candidate = current / name
+            if candidate.is_symlink():
+                fail(f"path alias in authoritative scope: {candidate.relative_to(ROOT).as_posix()}")
+            files.append(candidate)
+    return files
+
+
+def outside_authoritative_scope(relative_path: str, exclusions: set[Path]) -> bool:
+    candidate = (ROOT / relative_path.rstrip("/")).resolve()
+    return any(candidate == excluded or excluded in candidate.parents for excluded in exclusions)
+
+
+def verify_canonical_scope() -> None:
+    if git_path("rev-parse", "--show-toplevel") != ROOT:
+        fail("verifier is not bound to the canonical Git worktree root")
+    if PACK.resolve() != PACK or PACK.parent.parent != ROOT / "evidence":
+        fail("evidence packet path is not canonical")
+    for path in (PACK, NONCE_PATH, MANIFEST_PATH, REPORT_PATH):
+        if path.is_symlink():
+            fail(f"evidence packet path alias is forbidden: {path.relative_to(ROOT).as_posix()}")
+
+
 def authorized_level0b_paths() -> set[str]:
     manifest_path = ROOT / "benchmarks" / "level0b" / "cases.v2.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -89,6 +150,7 @@ def authorized_level0b_paths() -> set[str]:
 
 
 def main() -> None:
+    verify_canonical_scope()
     if not MANIFEST_PATH.is_file() or not REPORT_PATH.is_file() or not NONCE_PATH.is_file():
         fail("evidence packet is incomplete")
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -119,8 +181,8 @@ def main() -> None:
     if not verdicts or set(verdicts.values()) != {"PASS"}:
         fail("one or more forbidden capability categories did not pass")
     occurrences = []
-    for path in ROOT.rglob("*"):
-        if not path.is_file() or ".git" in path.parts:
+    for path in authoritative_files():
+        if not path.is_file():
             continue
         rel = path.relative_to(ROOT).as_posix()
         if rel in {MANIFEST_PATH.relative_to(ROOT).as_posix(), REPORT_PATH.relative_to(ROOT).as_posix(), "verify_level0.py"}:
@@ -138,7 +200,9 @@ def main() -> None:
     tracked = set(filter(None, git("diff", "--name-only").splitlines()))
     staged = set(filter(None, git("diff", "--cached", "--name-only").splitlines()))
     untracked = set(filter(None, git("ls-files", "--others", "--exclude-standard").splitlines()))
-    paths = tracked | staged | untracked
+    exclusions = excluded_git_trees()
+    paths = {path for path in tracked | staged | untracked
+             if not outside_authoritative_scope(path, exclusions)}
     allowed_paths = EXPECTED_PATHS | authorized_level0b_paths()
     if paths and not paths.issubset(allowed_paths):
         fail(f"out-of-scope working-tree paths: {sorted(paths - allowed_paths)}")
