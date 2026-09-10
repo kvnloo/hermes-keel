@@ -20,6 +20,12 @@ The mesh owns dispatch, messaging, and Kanban lifecycle. Keel Level-0 defines **
 
 ## C. Wire: claim (mesh.poll-shaped) + signed receipt
 
+**Normative requirements:**
+
+- A Level-0 claim MUST identify `intent_id`, `worker_id`, `task_id`, `task_revision`, and a placement locator.
+- A Level-0 completion MUST be a signed receipt over a canonical encoding of the receipt body; verifiers MUST reject tampered or incomplete signed records.
+- Peers MAY exchange claims using a mesh.poll-shaped envelope; Hermes mesh owns transport, Level-0 owns authorize+evidence semantics.
+
 ### Claim structure (mesh → worker, Kanban task-shaped)
 
 When the Hermes mesh dispatcher assigns a task to a Level-0 capable worker, the worker receives:
@@ -69,6 +75,12 @@ The signature covers the **canonical JSON serialization (RFC 8785 JCS)** of all 
 
 ## D. Locator + origin-post gate
 
+**Normative requirements:**
+
+- A placement locator MUST include `host_id`, an absolute `workspace_path`, and `git_branch`. A host_id-only placement MUST be treated as not located.
+- An origin GitHub write MUST be denied unless the target repository is a `kvnloo/*` private fork AND the claimed branch is present in that repository's fetchable refs.
+- Absence of a locator MUST fail closed for any operation that would publish or attach origin work.
+
 ### Placement locator (3-tuple requirement)
 
 A **complete placement locator** requires:
@@ -91,6 +103,12 @@ The worker MUST verify **before execution**:
 This gate prevents execution of arbitrary local-only code and ensures the Captain can inspect the same source revision the worker used.
 
 ## E. Fail-closed production + revision binding
+
+**Normative requirements:**
+
+- When `production_enabled` is false, intake MUST nack with a production-disabled reason; liveness probes MUST NOT report production as active.
+- A claim's `task_id` and `task_revision` MUST match the bound HITL/Captain approval revision; mismatch MUST deny the claim.
+- Enabling production or starting a keel service is out of scope for Level-0 library semantics and MUST be a separate, explicitly authorized activation.
 
 ### Fail-closed production mode
 
