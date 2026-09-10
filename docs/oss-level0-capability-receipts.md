@@ -112,14 +112,14 @@ This gate prevents execution of arbitrary local-only code and ensures the Captai
 
 ### Fail-closed production mode
 
-Intake MUST **nack (reject) the claim** if the Keel runtime is in production-enabled mode. The worker checks:
+When `production_enabled` is false, intake MUST nack (reject) the claim with a `production-disabled` reason. The worker checks:
 
 ```python
-if config.get("production_enabled", False):
-    return reject_receipt(reason="production_enabled_forbidden_at_level0")
+if not config.get("production_enabled", False):
+    return reject_receipt(reason="production-disabled")
 ```
 
-**Only `production_disabled` or explicit `production_enabled: false` is allowed.** The fail-closed default is DENY. This ensures Level-0 workers cannot accidentally execute in production.
+The fail-closed default is DENY. Happy-path claims that need production use an isolated peer with `production_enabled: true`; the live config stays false. This ensures production work is explicitly gated and isolated.
 
 ### HITL/Captain binding: task_id + task_revision
 
