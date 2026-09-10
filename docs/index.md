@@ -27,3 +27,5 @@ features:
 Hermes Keel is a proposed governance layer for [Hermes Agent](https://github.com/NousResearch/hermes-agent). It makes execution claims mechanically testable while leaving messaging, tools, sessions, workers, and canonical Kanban execution with Hermes.
 
 The repository has one sealed adversarial proof and a fail-closed verifier. Start with [Getting Started](/getting-started), then review the [Level 0 evidence](/level-0-evidence).
+
+For the OSS capability receipt protocol specification, see [OSS Level-0 Capability Receipts](/oss-level0-capability-receipts).

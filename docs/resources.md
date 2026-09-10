@@ -3,6 +3,7 @@
 ## Hermes Keel
 
 - [Hermes Keel repository](https://github.com/kvnloo/hermes-keel): specification, machine-readable level record, verifier, and evidence.
+- [OSS Level-0 Capability Receipts](https://github.com/kvnloo/hermes-keel/blob/main/docs/oss-level0-capability-receipts.md): receipt protocol specification for OSS workers proving Level-0 claims (PER-1299).
 - [Level 0 report](https://github.com/kvnloo/hermes-keel/blob/main/evidence/level-0/t_c8dc8afb/report.md): human-readable proof narrative and limitations.
 - [Level 0 manifest](https://github.com/kvnloo/hermes-keel/blob/main/evidence/level-0/t_c8dc8afb/manifest.json): task, run, worker, capability, nonce, and scope bindings.
 - [Level 0 verifier](https://github.com/kvnloo/hermes-keel/blob/main/verify_level0.py): deterministic packet integrity checks.
