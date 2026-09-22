@@ -1,0 +1,63 @@
+version: 1
+repo: kvnloo/hermes-keel
+id: hermes-keel
+kind: protocol
+summary: Constitutional governance and evidence boundary around Hermes execution, staged one invariant at a time.
+
+architecture:
+  subsystems:
+    - id: constitution
+      name: Constitutional specification
+      kind: governance
+      summary: Defines current authorized level, capability boundaries, evidence requirements, promotion rules, and rollback constraints.
+      paths:
+        - README.md
+        - docs/
+        - keel-level.json
+
+    - id: verifier
+      name: Level verifier
+      kind: verification
+      summary: Mechanically probes whether the currently authorized Keel invariant is satisfied.
+      paths:
+        - verify_level0.py
+        - evidence/
+        - benchmarks/
+      depends_on: [constitution]
+
+    - id: supervisor
+      name: Supervisor experiments
+      kind: supervision
+      paths:
+        - supervisor/
+      depends_on: [constitution]
+
+  implements_mechanisms:
+    - keel-governed-execution
+
+  provides_interfaces: []
+  consumes_interfaces: []
+
+  produces_representations: []
+  consumes_representations:
+    - observed-topology
+
+  boundaries:
+    owns:
+      - capability and authority constraints around Hermes execution
+      - evidence requirements and governed promotion
+      - rollback and non-self-authorization invariants
+    not_here:
+      - Hermes messaging and session runtime
+      - canonical Kanban task lifecycle
+      - external dashboard execution truth
+
+  evidence:
+    docs:
+      - README.md
+      - docs/
+    tests:
+      - verify_level0.py
+      - benchmarks/
+    schemas:
+      - keel-level.json
