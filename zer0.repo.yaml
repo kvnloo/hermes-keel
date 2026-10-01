@@ -1,0 +1,46 @@
+version: 1
+repo: kvnloo/hermes-keel
+id: hermes-keel
+kind: suite
+summary: Constitutional governance layer for Hermes defining capability boundaries, evidence chains, staged promotion, rollback, and non-self-authorizing evolution.
+
+architecture:
+  subsystems:
+    - id: constitutional-policy
+      name: Constitutional policy
+      kind: governance
+      summary: Defines Keel levels, hard authority boundaries, promotion requirements, and the rule that self-modification cannot self-authorize.
+      paths: [README.md, keel-level.json, docs/]
+    - id: supervisor
+      name: Supervisor
+      kind: governance
+      summary: Supervises bounded execution and validates runtime invariants without replacing Hermes execution truth.
+      paths: [supervisor/]
+      depends_on: [constitutional-policy]
+    - id: privileged-broker
+      name: Privileged broker reference
+      kind: security
+      summary: Provides bounded privilege-handling experiments kept subordinate to explicit capability and evidence policy.
+      paths: [privileged_broker/]
+      depends_on: [constitutional-policy]
+    - id: evidence
+      name: Evidence and benchmark layer
+      kind: evidence
+      summary: Stores runtime evidence, adversarial probes, and benchmarks used to decide whether a Keel level is satisfied.
+      paths: [evidence/, benchmarks/, verify_level0.py]
+      depends_on: [constitutional-policy]
+
+  implements_mechanisms: [keel-governed-execution]
+  provides_interfaces: []
+  consumes_interfaces: []
+  produces_representations: []
+  consumes_representations: []
+
+  boundaries:
+    owns: [capability policy, execution invariants, evidence requirements, staged promotion, rollback governance]
+    not_here: [Hermes runtime execution truth, Kanban lifecycle authority, product prioritization, autonomous authority expansion]
+
+  evidence:
+    docs: [README.md, docs/]
+    tests: [verify_level0.py, benchmarks/]
+    schemas: [keel-level.json]
