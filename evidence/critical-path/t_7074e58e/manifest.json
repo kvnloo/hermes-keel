@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "taskId": "t_7074e58e",
+  "controllerRevision": "77a4ea98cc994917c54d7df612ac631e41cbdd50",
+  "overallStatus": "UNKNOWN_REQUIRED_FIXTURES_MISSING",
+  "acceptanceClaim": false,
+  "files": [
+    {"path": "report.json", "sha256": "6b12849486446c75e5420440aaff7f6694666d25ae2c81eb523e1228d75eb7f3", "sizeBytes": 2010},
+    {"path": "report.md", "sha256": "f347e7086eb3f0394a962e3563a25f2fe7a72c36acc9b1c70757260e1f575b4b", "sizeBytes": 888},
+    {"path": "../../../keel-critical-path.json", "sha256": "3760b6cc9fce39884e9f5135b98e6bfb606b3a4abcbb81003834501dca5c1020", "sizeBytes": 6477},
+    {"path": "../../../keel-critical-path.md", "sha256": "05a7815f364bb113d82cbe288a20bf81ab5df96f38ed8d307e61ef08bedf0450", "sizeBytes": 4386}
+  ],
+  "sealed": true
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "keel.phase0-current-command-evidence.v1",
+  "acceptanceClaim": false,
+  "scope": "phase0_only_no_execution",
+  "task": "t_333373e8",
+  "run": 298,
+  "host": "groot",
+  "approved_source_commit": "6fe20cbfe5a16c073b8f2a801add00400dbc134b",
+  "reconciliation": {
+    "phase0_ran": false,
+    "basis": "Both fixed root receipt/request paths and /var/lib/hermes-privileged-broker were path-absent; no chat inference used.",
+    "stale_unconsumed_binding_invalidated": "5715b5807249ae31470db800f9262e1559a97e5cfa9a5b878eb684dd0aad9384"
+  },
+  "board": {
+    "path": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
+    "device": 66307,
+    "inode": 413083864,
+    "uid": 1000,
+    "mode": 420,
+    "schema_sha256": "b6dfb154a8fefa90b8ac50a7583cdc45355a3c70df3032f157192b7eeb304e6d"
+  },
+  "binding": {
+    "path": "/var/tmp/hermes-keel-phase0-binding.json",
+    "packet_sha256": "57dd43e780ae2bd7089886a80e5a998f18538451d335f83fe1815b24a277a161",
+    "file_sha256": "09261a2ac7d1e5c1eaa51213073ea910500207bdf70ea212ea3f7edb6a6863e1",
+    "owner_uid": 1000,
+    "mode": 292,
+    "created_at": 1787018799,
+    "created_at_utc": "2026-08-18T02:06:39Z",
+    "expires_at": 1787022399,
+    "expires_at_utc": "2026-08-18T03:06:39Z"
+  },
+  "package": {
+    "path": "/var/tmp/hermes-keel-phase0-package-t_333373e8-r298",
+    "manifest_sha256": "8fecd5179585a1f497441395851e27d4edcfb9a288498c851012ed7834158955",
+    "runtime_sha256": "d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4",
+    "runtime_bytes": 39138928
+  },
+  "bootstrap": {
+    "path": "/workspace/zer0/oss/hermes-keel/privileged_broker/phase0_bootstrap.py",
+    "sha256": "7618608138264cd8484dd4ca0c603da386a4435773c93f2d87766cf68b9d1a56",
+    "argv": [],
+    "command": "printf '%s  %s\\n' '7618608138264cd8484dd4ca0c603da386a4435773c93f2d87766cf68b9d1a56' '/workspace/zer0/oss/hermes-keel/privileged_broker/phase0_bootstrap.py' | sha256sum -c - && sudo /usr/bin/python3 /workspace/zer0/oss/hermes-keel/privileged_broker/phase0_bootstrap.py",
+    "executed": false,
+    "expected_output": "<bootstrap path>: OK, then JSON keel.phase0-bootstrap-receipt.v1, then PHASE-1 REQUEST SHA-256: <full digest>"
+  },
+  "verification": {
+    "dedicated_privileged_broker": "51 passed, 23 subtests passed",
+    "full_pytest": "83 passed, 23 subtests passed",
+    "compileall": "passed",
+    "shell_syntax": "passed",
+    "git_diff_check": "passed",
+    "package_verify": "passed"
+  },
+  "forbidden_effects": {
+    "sudo_used": false,
+    "pkexec_used": false,
+    "install_performed": false,
+    "ollama_mutated": false,
+    "service_restarted": false,
+    "authorization_consumed": false
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runId": "pythia-t_7074e58e-controller-proof",
+  "suite": "certified-controller-focused-plus-keel-audit",
+  "controllerRevision": "77a4ea98cc994917c54d7df612ac631e41cbdd50",
+  "modelIdentities": {
+    "orchestrator": "openai-codex/gpt-5.6-sol",
+    "specialists": "openai-codex/gpt-5.6-luna"
+  },
+  "productionMutation": false,
+  "productionSyntheticRows": false,
+  "overallStatus": "UNKNOWN_REQUIRED_FIXTURES_MISSING",
+  "level1Claim": false,
+  "results": [
+    {"id": "CONTROLLER-FOCUSED", "status": "PASS", "evidence": "15 pytest cases passed at exact detached revision"},
+    {"id": "K0-CLEAN-SNAPSHOT", "status": "PASS", "evidence": "Level-0 verifier PASS; nonce mutation FAIL"},
+    {"id": "K0-SHARED-CHECKOUT", "status": "FAIL", "evidence": "nested .worktrees duplicate nonce scan"},
+    {"id": "K1-LF006-CODE", "status": "PASS", "evidence": "23 targeted; 85 full tests and 23 subtests pass"},
+    {"id": "K1-LF006-RUNTIME", "status": "FAIL", "evidence": "live 226/NAMESPACE crash loop; activation gated"},
+    {"id": "K2-BROKER-CODE", "status": "PASS", "evidence": "51 broker unittests pass"},
+    {"id": "K2-BROKER-RUNTIME", "status": "UNKNOWN", "evidence": "no privileged ceremony executed"},
+    {"id": "K3-ACTIVE-POLICY", "status": "UNKNOWN", "evidence": "ACTIVE receipt and dispatcher enforcement absent; FROZEN/DENY retained"},
+    {"id": "K4-MESH-CONTAINMENT", "status": "UNKNOWN", "evidence": "no disposable competing-:8787 fixture"},
+    {"id": "K5-DISPATCH-WAKE", "status": "UNKNOWN", "evidence": "Keel-specific N>=30 sealed measurement absent"},
+    {"id": "K6-LEVEL1", "status": "REFUSED", "evidence": "Level 0 only; prerequisites incomplete"}
+  ],
+  "mutationProof": {
+    "green": "clean-snapshot nonce verifier passes",
+    "red": "mutated nonce prefix fails exact-byte oracle",
+    "restored": "fresh clean snapshot passes",
+    "limitation": "broad Keel adversarial mutation catalog is not implemented"
+  },
+  "foreignWorkPreserved": true,
+  "sealed": true
+}

@@ -1,0 +1,72 @@
+{
+  "schema": "keel.v2-captain-request-preflight.v1",
+  "acceptanceClaim": false,
+  "task": "t_a9f17226",
+  "run": 181,
+  "reviewed_commit": "56a89883edfecb143d9b5111b6f2c9a62f82d41d",
+  "verdict": "blocked_fail_closed_no_request_generated",
+  "action": "ollama-system-runtime-switch-v2",
+  "blocking_findings": [
+    {
+      "gate": "live-pre-state-capture",
+      "finding": "The reviewed create-request path cannot capture the Ollama process executable on this live host as UID 1000: resolving /proc/3806/exe returns EACCES. The same reviewed capture path requires listener PID telemetry that unprivileged ss does not expose. Substituting inferred values would not be an exact live capture."
+    },
+    {
+      "gate": "sealed-package-bootstrap",
+      "finding": "The reviewed create-request CLI requires Path(package).resolve(strict=True), but the request must bind a future root-private package beneath /root. UID 1000 cannot resolve that root-private path before or after sealing, while binding the UID-1000 /var/tmp evidence package would violate the explicit no-mutable-staging authority boundary."
+    },
+    {
+      "gate": "single-supported-command",
+      "finding": "No installed /usr/local/sbin/hermes-privileged-broker exists. Therefore no reviewed authenticated approve command can consume a valid v2 packet without first introducing an unreviewed bootstrap wrapper or an inline privileged shell transaction."
+    }
+  ],
+  "fresh_package_evidence": {
+    "path": "/var/tmp/hermes-keel-v2-package-t_a9f17226-r181",
+    "role": "uid-1000 staging evidence only; never privileged input",
+    "manifest_sha256": "ed9304a597b8f2dcec127b30b9c1cd2b76d5fa2e7b3ff2038a424e212aa93e6e",
+    "runtime_sha256": "d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4",
+    "runtime_bytes": 39138928
+  },
+  "live_observation": {
+    "host": "groot",
+    "service": "ollama.service",
+    "active": true,
+    "main_pid": 3806,
+    "fragment": "/usr/lib/systemd/system/ollama.service",
+    "dropins": ["/etc/systemd/system/ollama.service.d/model-store.conf"],
+    "exec_start": "/usr/bin/ollama serve",
+    "environment": {
+      "HOME": "/var/lib/ollama",
+      "OLLAMA_MODELS": "/mnt/zer0models/zer0-models/ollama",
+      "CUDA_VISIBLE_DEVICES": ""
+    },
+    "listener": "127.0.0.1:11434",
+    "api_version": "0.16.1",
+    "rollback_binary": "/usr/bin/ollama",
+    "rollback_sha256": "ab27361e1e4c70a5aed215cce0cf6033bbf61650a0eb7e4b63cf01c76a06353a",
+    "board_path": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
+    "board_uid": 1000,
+    "board_gid": 1000,
+    "board_mode": 644,
+    "board_device": 66307,
+    "board_inode": 413083864,
+    "board_point_in_time_sha256": "f368a0d9c0a8381c006c24692484f4e9738593a70c6819e138f507c1930d9e82"
+  },
+  "tests": {
+    "pytest": "77 passed, 3 subtests passed",
+    "unittest": "45 passed",
+    "package_verify": "passed"
+  },
+  "constraints": {
+    "request_created": false,
+    "nonce_created": false,
+    "approval_command_issued": false,
+    "sudo_used": false,
+    "pkexec_used": false,
+    "install_performed": false,
+    "service_mutated": false,
+    "ollama_mutated": false,
+    "LF_007_run": false,
+    "level_1_run": false
+  }
+}

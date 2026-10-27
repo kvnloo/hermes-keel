@@ -1,0 +1,56 @@
+{
+  "schema": "keel.phase0-current-command-evidence.v1",
+  "acceptanceClaim": false,
+  "scope": "phase0_only_no_execution",
+  "task": "t_af76e04a",
+  "run": 217,
+  "host": "groot",
+  "approved_source_commit": "6fe20cbfe5a16c073b8f2a801add00400dbc134b",
+  "board": {
+    "path": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
+    "device": 66307,
+    "inode": 413083864,
+    "uid": 1000,
+    "mode": 420,
+    "schema_sha256": "ba1db776adcfbc4893c45f4cff87afff664245689e2d25b1f299b7954b145369"
+  },
+  "binding": {
+    "path": "/var/tmp/hermes-keel-phase0-binding.json",
+    "packet_sha256": "5715b5807249ae31470db800f9262e1559a97e5cfa9a5b878eb684dd0aad9384",
+    "file_sha256": "22c1837e971164e4d27b35ae1249951b5680b041c265c50384b0da5f5f0a069b",
+    "owner_uid": 1000,
+    "mode": 292,
+    "created_at": 1787009829,
+    "expires_at": 1787013429
+  },
+  "package": {
+    "path": "/var/tmp/hermes-keel-phase0-package-t_af76e04a-r217",
+    "manifest_sha256": "8fecd5179585a1f497441395851e27d4edcfb9a288498c851012ed7834158955",
+    "runtime_sha256": "d0758d38ac5882a2c68fd930d0c1220af1952469fa9f30c268746d4021709bf4",
+    "runtime_bytes": 39138928
+  },
+  "bootstrap": {
+    "path": "/workspace/zer0/oss/hermes-keel/privileged_broker/phase0_bootstrap.py",
+    "sha256": "7618608138264cd8484dd4ca0c603da386a4435773c93f2d87766cf68b9d1a56",
+    "argv": [],
+    "command": "printf '%s  %s\\n' '7618608138264cd8484dd4ca0c603da386a4435773c93f2d87766cf68b9d1a56' '/workspace/zer0/oss/hermes-keel/privileged_broker/phase0_bootstrap.py' | sha256sum -c - && sudo /usr/bin/python3 /workspace/zer0/oss/hermes-keel/privileged_broker/phase0_bootstrap.py",
+    "executed": false,
+    "expected_output": "<bootstrap path>: OK, then JSON keel.phase0-bootstrap-receipt.v1, then PHASE-1 REQUEST SHA-256: <full digest>"
+  },
+  "verification": {
+    "dedicated_phase0": "6 passed, 20 subtests passed",
+    "full_pytest": "83 passed, 23 subtests passed",
+    "compileall": "passed",
+    "shell_syntax": "passed",
+    "git_diff_check": "passed",
+    "package_verify": "passed"
+  },
+  "forbidden_effects": {
+    "sudo_used": false,
+    "pkexec_used": false,
+    "install_performed": false,
+    "ollama_mutated": false,
+    "service_restarted": false,
+    "authorization_consumed": false
+  }
+}
