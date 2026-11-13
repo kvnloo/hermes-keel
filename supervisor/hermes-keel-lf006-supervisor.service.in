@@ -7,13 +7,18 @@ Type=simple
 ExecStart=@PYTHON@ @SOURCE@ --socket=%t/hermes-keel/lf006.sock --db=@DB@ --board=@BOARD@ --receipts=%h/.local/state/hermes-keel/lf006-receipts.jsonl
 Restart=on-failure
 RestartSec=2
+# Let the user manager own the runtime directory lifecycle. This prevents a
+# stale socket/parent from surviving a crash and keeps the socket under the
+# manager's per-user runtime tree.
+RuntimeDirectory=hermes-keel
+RuntimeDirectoryMode=0700
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=read-only
 # Socket + receipts are owned state. The board directory must be writable only
 # because SQLite WAL mode needs -shm/-wal coordination even for SELECT.
-ReadWritePaths=%t/hermes-keel %h/.local/state/hermes-keel @BOARD_DIR@
+ReadWritePaths=%h/.local/state/hermes-keel @BOARD_DIR@
 # systemctl talks to the user manager over the private D-Bus socket.
 RestrictAddressFamilies=AF_UNIX
 LockPersonality=yes

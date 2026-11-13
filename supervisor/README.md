@@ -27,7 +27,7 @@ Substitute the `@...@` values in `hermes-keel-lf006-supervisor.service.in` with 
 Then:
 
 ```sh
-install -d -m 700 "$XDG_RUNTIME_DIR/hermes-keel" "$HOME/.local/state/hermes-keel"
+install -d -m 700 "$HOME/.local/state/hermes-keel"
 systemctl --user daemon-reload
 systemctl --user enable --now hermes-keel-lf006-supervisor.service
 ```
